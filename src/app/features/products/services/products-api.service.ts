@@ -30,4 +30,19 @@ export class ProductsApiService {
   getByCategory(category: string): Observable<ProductsResponse> {
     return this.api.get<ProductsResponse>(`/products/category/${category}`);
   }
+
+  // CONCEPT: Architecture - CRUD methods map 1:1 to REST endpoints.
+  // DummyJSON simulates these operations (returns fake responses) but does not persist changes.
+
+  add(product: Partial<Product>): Observable<Product> {
+    return this.api.post<Product>('/products/add', product);
+  }
+
+  update(id: number, changes: Partial<Product>): Observable<Product> {
+    return this.api.put<Product>(`/products/${id}`, changes);
+  }
+
+  delete(id: number): Observable<Product & { isDeleted: boolean; deletedOn: string }> {
+    return this.api.delete(`/products/${id}`);
+  }
 }

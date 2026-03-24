@@ -13,7 +13,12 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { InventoryStore, InventoryFilters } from '../store/inventory.store';
+import { InventoryFormComponent, InventoryFormData } from './inventory-form.component';
+import { ConfirmDialogComponent, ConfirmDialogData } from '../../../shared/ui/confirm-dialog/confirm-dialog.component';
+import { Product } from '../../../shared/models/product.model';
 
 @Component({
   selector: 'app-inventory-list',
@@ -116,6 +121,13 @@ import { InventoryStore, InventoryFilters } from '../store/inventory.store';
           >
             <mat-icon>{{ store.filters().sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
           </button>
+
+          <!-- CONCEPT: Architecture - The "Add Product" button opens a dialog.
+               The component delegates the actual creation to the store. -->
+          <button mat-flat-button color="primary" (click)="onAddProduct()">
+            <mat-icon>add</mat-icon>
+            Add Product
+          </button>
         </div>
 
         <div class="stock-filter-row">
@@ -210,13 +222,23 @@ import { InventoryStore, InventoryFilters } from '../store/inventory.store';
           </ng-container>
 
           <!-- Actions Column -->
+          <!-- CONCEPT: Architecture - Each row has View, Edit, and Delete actions.
+               Edit opens a dialog pre-filled via entityMap()[id] (O(1) lookup).
+               Delete opens a confirmation dialog before calling store.deleteProduct(). -->
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef>Actions</th>
             <td mat-cell *matCellDef="let product">
-              <button mat-stroked-button (click)="onSelectProduct(product.id)">
-                <mat-icon>visibility</mat-icon>
-                View
-              </button>
+              <div class="action-buttons">
+                <button mat-icon-button matTooltip="View" (click)="onSelectProduct(product.id)">
+                  <mat-icon>visibility</mat-icon>
+                </button>
+                <button mat-icon-button matTooltip="Edit" (click)="onEditProduct(product)">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button matTooltip="Delete" (click)="onDeleteProduct(product)">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
             </td>
           </ng-container>
 
@@ -390,6 +412,11 @@ import { InventoryStore, InventoryFilters } from '../store/inventory.store';
       height: 18px;
     }
 
+    .action-buttons {
+      display: flex;
+      gap: 4px;
+    }
+
     .pagination-bar {
       display: flex;
       justify-content: center;
@@ -476,6 +503,11 @@ export class InventoryListComponent {
   // It just reads signals and calls methods. This is the "dumb component" pattern.
   protected readonly store = inject(InventoryStore);
 
+  // CONCEPT: Architecture - MatDialog and MatSnackBar are Angular Material services
+  // for opening dialogs and showing notification toasts.
+  private readonly dialog = inject(MatDialog);
+  private readonly snackBar = inject(MatSnackBar);
+
   // CONCEPT: Architecture - The component has ZERO business logic.
   // All filtering, pagination, and data fetching is in the store.
   // The component is purely presentational + user interaction dispatch.
@@ -529,5 +561,74 @@ export class InventoryListComponent {
     if (stock === 0) return 'stock-out';
     if (stock <= 10) return 'stock-low';
     return 'stock-in';
+  }
+
+  // CONCEPT: Architecture - Dialog-based CRUD. The component opens a dialog,
+  // waits for the result, then delegates to the store. The store handles
+  // the API call and entity update. The component shows a snackbar for feedback.
+
+  onAddProduct() {
+    const dialogRef = this.dialog.open(InventoryFormComponent, {
+      width: '560px',
+      data: {
+        product: null,
+        categories: this.store.categories(),
+      } satisfies InventoryFormData,
+    });
+
+    dialogRef.afterClosed().subscribe(async (result) => {
+      if (!result) return;
+      const created = await this.store.addProduct(result);
+      if (created) {
+        this.snackBar.open('Product added successfully', 'Close', { duration: 3000 });
+      } else {
+        this.snackBar.open('Failed to add product', 'Close', { duration: 3000 });
+      }
+    });
+  }
+
+  // CONCEPT: entityMap() - We pass the full product object to the dialog.
+  // In the store, entityMap()[id] gives O(1) access to any product by ID.
+  // Here we already have the product from the table row, so we pass it directly.
+  onEditProduct(product: Product) {
+    const dialogRef = this.dialog.open(InventoryFormComponent, {
+      width: '560px',
+      data: {
+        product,
+        categories: this.store.categories(),
+      } satisfies InventoryFormData,
+    });
+
+    dialogRef.afterClosed().subscribe(async (result) => {
+      if (!result) return;
+      const updated = await this.store.updateProduct(product.id, result);
+      if (updated) {
+        this.snackBar.open('Product updated successfully', 'Close', { duration: 3000 });
+      } else {
+        this.snackBar.open('Failed to update product', 'Close', { duration: 3000 });
+      }
+    });
+  }
+
+  onDeleteProduct(product: Product) {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '400px',
+      data: {
+        title: 'Delete Product',
+        message: `Are you sure you want to delete "${product.title}"? This action cannot be undone.`,
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+      } satisfies ConfirmDialogData,
+    });
+
+    dialogRef.afterClosed().subscribe(async (confirmed) => {
+      if (!confirmed) return;
+      const success = await this.store.deleteProduct(product.id);
+      if (success) {
+        this.snackBar.open('Product deleted successfully', 'Close', { duration: 3000 });
+      } else {
+        this.snackBar.open('Failed to delete product', 'Close', { duration: 3000 });
+      }
+    });
   }
 }

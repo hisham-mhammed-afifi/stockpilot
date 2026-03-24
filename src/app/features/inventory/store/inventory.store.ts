@@ -1,8 +1,17 @@
 import { computed, inject } from '@angular/core';
 import { signalStore, withState, withComputed, withMethods, withHooks, patchState } from '@ngrx/signals';
+// CONCEPT: withEntities - Import entity management from @ngrx/signals/entities.
+// This gives us normalized storage and entity CRUD operations.
+import {
+  withEntities,
+  setAllEntities,
+  addEntity,
+  updateEntity,
+  removeEntity,
+} from '@ngrx/signals/entities';
 import { firstValueFrom } from 'rxjs';
 import { ProductsApiService } from '../../products/services/products-api.service';
-import { Product, ProductsResponse } from '../../../shared/models/product.model';
+import { Product } from '../../../shared/models/product.model';
 
 // CONCEPT: State Shape - Define the state interface separately.
 // This makes it clear what the store manages and helps with typing.
@@ -15,8 +24,11 @@ export type InventoryFilters = {
   sortOrder: 'asc' | 'desc';
 };
 
+// CONCEPT: Normalization - Notice that "products: Product[]" is GONE from the state.
+// withEntities<Product>() replaces it with normalized storage:
+//   { ids: number[], entityMap: Record<number, Product> }
+// This gives O(1) lookups by ID instead of O(n) array.find().
 type InventoryState = {
-  products: Product[];
   categories: { slug: string; name: string }[];
   filters: InventoryFilters;
   total: number;
@@ -36,7 +48,6 @@ const initialFilters: InventoryFilters = {
 };
 
 const initialState: InventoryState = {
-  products: [],
   categories: [],
   filters: initialFilters,
   total: 0,
@@ -57,20 +68,26 @@ export const InventoryStore = signalStore(
   { providedIn: 'root' },
 
   // CONCEPT: withState() - Defines the state shape and initial values.
-  // Each property becomes a Signal: store.loading(), store.products(), etc.
+  // Each property becomes a Signal: store.loading(), store.categories(), etc.
   // The state is immutable. You cannot do store.loading = true.
   withState(initialState),
 
+  // CONCEPT: withEntities<Product>() - Adds normalized entity management.
+  // Internally stores entities as { ids: number[], entityMap: Record<number, Product> }.
+  // This gives O(1) lookups by ID (vs O(n) with array.find()).
+  // Exposes signals: entities() (array), entityMap() (dict), ids() (array of IDs).
+  withEntities<Product>(),
+
   // CONCEPT: withComputed() - Adds derived signals to the store.
   // These are read-only computed signals that react to state changes.
-  // The store parameter gives you access to all state signals from withState.
-  // Each computed signal only re-evaluates when its specific dependencies change.
+  // The store parameter gives you access to all state signals from withState
+  // AND entity signals from withEntities.
   withComputed((store) => ({
     // CONCEPT: Computed - Client-side filtering for stock status.
-    // The API does not support this filter, so we filter in memory.
-    // This computed only recalculates when products() or filters() change.
+    // store.entities() returns the array view of normalized data.
+    // This computed only recalculates when entities() or filters() change.
     filteredProducts: computed(() => {
-      const products = store.products();
+      const products = store.entities(); // was store.products()
       const stockStatus = store.filters().stockStatus;
 
       if (stockStatus === 'all') return products;
@@ -85,11 +102,12 @@ export const InventoryStore = signalStore(
       });
     }),
 
-    // CONCEPT: Computed - Derived lookup. Finds the selected product from the list.
-    // Returns null if no product is selected or the ID is not found.
+    // CONCEPT: entityMap() for O(1) lookups - Instead of store.products().find(p => p.id === id),
+    // use store.entityMap()[id]. This is a map lookup, not an array scan.
+    // For 1000 products, this is ~1000x faster.
     selectedProduct: computed(() => {
       const id = store.selectedProductId();
-      return id ? store.products().find(p => p.id === id) ?? null : null;
+      return id ? store.entityMap()[id] ?? null : null;
     }),
 
     // CONCEPT: Computed - Pagination helpers derived from skip, limit, total.
@@ -100,11 +118,11 @@ export const InventoryStore = signalStore(
     hasNextPage: computed(() => store.skip() + store.limit() < store.total()),
     hasPrevPage: computed(() => store.skip() > 0),
 
-    // CONCEPT: Computed - Summary stats aggregated from the products array.
-    // This only recalculates when store.products() or store.total() changes,
+    // CONCEPT: Computed - Summary stats aggregated from the entities array.
+    // This only recalculates when store.entities() or store.total() changes,
     // not when store.loading() or store.filters() changes.
     stats: computed(() => {
-      const products = store.products();
+      const products = store.entities(); // was store.products()
       return {
         totalProducts: store.total(),
         inStock: products.filter(p => p.stock > 10).length,
@@ -165,7 +183,7 @@ export const InventoryStore = signalStore(
       patchState(store, { loading: true, error: null });
       try {
         const filters = store.filters();
-        let response: ProductsResponse;
+        let response;
 
         if (filters.search) {
           response = await firstValueFrom(
@@ -186,8 +204,11 @@ export const InventoryStore = signalStore(
           );
         }
 
-        patchState(store, {
-          products: response.products,
+        // CONCEPT: setAllEntities() - Replaces ALL entities with a new set.
+        // Use after a full list fetch. This clears old entities and sets new ones.
+        // patchState composability: entity operations and regular state patches
+        // can be combined in a single patchState call for atomic updates.
+        patchState(store, setAllEntities(response.products), {
           total: response.total,
           loading: false,
         });
@@ -205,6 +226,69 @@ export const InventoryStore = signalStore(
         patchState(store, { categories });
       } catch {
         // Non-critical, silently fail
+      }
+    },
+
+    // CONCEPT: addEntity() - Adds a single entity to the collection.
+    // The entity map and ids array are updated automatically.
+    // We also increment total to keep stats accurate.
+    async addProduct(product: Partial<Product>) {
+      patchState(store, { loading: true, error: null });
+      try {
+        const created = await firstValueFrom(productsApi.add(product));
+        patchState(store, addEntity(created), {
+          loading: false,
+          total: store.total() + 1,
+        });
+        return created;
+      } catch (err) {
+        patchState(store, {
+          loading: false,
+          error: err instanceof Error ? err.message : 'Failed to add product',
+        });
+        return null;
+      }
+    },
+
+    // CONCEPT: updateEntity() - Updates a single entity by ID.
+    // Only the specified changes are merged. The rest of the entity stays intact.
+    // Other components reading this entity via entityMap() see the update immediately.
+    async updateProduct(id: number, changes: Partial<Product>) {
+      patchState(store, { loading: true, error: null });
+      try {
+        const updated = await firstValueFrom(productsApi.update(id, changes));
+        patchState(store, updateEntity({ id, changes: updated }), {
+          loading: false,
+        });
+        return updated;
+      } catch (err) {
+        patchState(store, {
+          loading: false,
+          error: err instanceof Error ? err.message : 'Failed to update product',
+        });
+        return null;
+      }
+    },
+
+    // CONCEPT: removeEntity() - Removes an entity by ID.
+    // If the deleted product was selected, clear the selection too.
+    // We decrement total to keep stats accurate.
+    async deleteProduct(id: number) {
+      patchState(store, { loading: true, error: null });
+      try {
+        await firstValueFrom(productsApi.delete(id));
+        patchState(store, removeEntity(id), {
+          loading: false,
+          total: store.total() - 1,
+          selectedProductId: store.selectedProductId() === id ? null : store.selectedProductId(),
+        });
+        return true;
+      } catch (err) {
+        patchState(store, {
+          loading: false,
+          error: err instanceof Error ? err.message : 'Failed to delete product',
+        });
+        return false;
       }
     },
 
