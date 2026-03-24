@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { Subscription } from 'rxjs';
+import { ThemeService } from '../theme/theme.store';
 
 interface NavItem {
   label: string;
@@ -37,9 +38,8 @@ interface NavItem {
       </button>
       <span class="app-name">StockPilot</span>
       <span class="spacer"></span>
-      <!-- Theme toggle placeholder for Section 2 -->
-      <button mat-icon-button aria-label="Toggle theme">
-        <mat-icon>brightness_6</mat-icon>
+      <button mat-icon-button aria-label="Toggle theme" (click)="themeService.toggleTheme()">
+        <mat-icon>{{ themeService.icon() }}</mat-icon>
       </button>
     </mat-toolbar>
 
@@ -129,6 +129,7 @@ interface NavItem {
   `,
 })
 export class ShellComponent implements OnInit, OnDestroy {
+  readonly themeService = inject(ThemeService);
   private breakpointObserver = inject(BreakpointObserver);
   private subscription?: Subscription;
   private sidenav = viewChild<MatSidenav>('sidenav');
@@ -137,6 +138,7 @@ export class ShellComponent implements OnInit, OnDestroy {
 
   navItems: NavItem[] = [
     { label: 'Home', route: '/', icon: 'home', disabled: false },
+    { label: 'Signals Playground', route: '/signals-playground', icon: 'science', disabled: false },
     { label: 'Products', route: '/products', icon: 'shopping_bag', disabled: true, section: 'Section 3 - Coming Soon' },
     { label: 'Inventory', route: '/inventory', icon: 'inventory_2', disabled: true, section: 'Section 4 - Coming Soon' },
     { label: 'Orders', route: '/orders', icon: 'receipt_long', disabled: true, section: 'Section 6 - Coming Soon' },

@@ -7,5 +7,6 @@ export const routes: Routes = [
   { path: 'orders', loadChildren: () => import('./features/orders/orders.routes').then(m => m.ordersRoutes) },
   { path: 'order-builder', loadChildren: () => import('./features/order-builder/order-builder.routes').then(m => m.orderBuilderRoutes) },
   { path: 'dashboard', loadChildren: () => import('./features/dashboard/dashboard.routes').then(m => m.dashboardRoutes) },
+  { path: 'signals-playground', loadComponent: () => import('./features/home/signals-playground/signals-playground.component').then(m => m.SignalsPlaygroundComponent) },
   { path: '**', redirectTo: '' },
 ];

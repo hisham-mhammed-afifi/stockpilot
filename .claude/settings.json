@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(npx ng:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(find /d/POCs/angu/src/app -type f \\\\\\(-name *.ts -o -name *.html -o -name *.scss \\\\\\))",
+      "Bash(find /d/POCs/angu/src -type f \\\\\\(-name *.ts -o -name *.html -o -name *.scss -o -name *.md \\\\\\))"
     ]
   }
 }

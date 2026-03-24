@@ -35,4 +35,32 @@ body {
   margin: 0;
   height: 100%;
 }
-/* You can add global styles to this file, and also import other style files */
+/* === Section 02: Theme Variables === */
+body.light-theme {
+  color-scheme: light;
+  --bg-primary: #fafafa;
+  --bg-card: #ffffff;
+  --text-primary: #212121;
+  --text-secondary: rgba(0, 0, 0, 0.54);
+  --warning-bg: #fff3e0;
+  --warning-text: #e65100;
+}
+
+body.dark-theme {
+  color-scheme: dark;
+  --bg-primary: #303030;
+  --bg-card: #424242;
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --warning-bg: #4e3200;
+  --warning-text: #ffb74d;
+
+  @include mat.theme((
+    color: (
+      primary: mat.$azure-palette,
+      tertiary: mat.$blue-palette,
+    ),
+    typography: Roboto,
+    density: 0,
+  ));
+}
