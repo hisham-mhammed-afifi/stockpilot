@@ -9,7 +9,9 @@ import {
   updateEntity,
   removeEntity,
 } from '@ngrx/signals/entities';
-import { firstValueFrom } from 'rxjs';
+import { rxMethod } from '@ngrx/signals/rxjs-interop';
+import { firstValueFrom, pipe, switchMap, tap } from 'rxjs';
+import { tapResponse } from '@ngrx/operators';
 import { ProductsApiService } from '../../products/services/products-api.service';
 import { Product } from '../../../shared/models/product.model';
 
@@ -175,50 +177,50 @@ export const InventoryStore = signalStore(
       }));
     },
 
-    // CONCEPT: Async methods - Simple Promise-based approach using firstValueFrom()
-    // to convert the Observable from ProductsApiService into a Promise.
-    // In Section 6 we will replace this with rxMethod for more powerful
-    // Observable pipelines (debounce, switchMap, retry, etc.).
-    async loadProducts() {
-      patchState(store, { loading: true, error: null });
-      try {
-        const filters = store.filters();
-        let response;
+    // CONCEPT: rxMethod migration - This was previously an async/await method (Section 4).
+    // We migrated it to rxMethod (Section 6) to gain: cancellation via switchMap
+    // (if loadProducts is called twice, the first HTTP call is cancelled),
+    // and tapResponse for error-safe handling that keeps the stream alive.
+    // Compare this with the Orders store to see the same pattern.
+    loadProducts: rxMethod<void>(
+      pipe(
+        tap(() => patchState(store, { loading: true, error: null })),
+        switchMap(() => {
+          const filters = store.filters();
 
-        if (filters.search) {
-          response = await firstValueFrom(
-            productsApi.search(filters.search, store.limit())
-          );
-        } else if (filters.category) {
-          response = await firstValueFrom(
-            productsApi.getByCategory(filters.category)
-          );
-        } else {
-          response = await firstValueFrom(
-            productsApi.getAll({
-              limit: store.limit(),
-              skip: store.skip(),
-              sortBy: filters.sortBy,
-              order: filters.sortOrder,
+          const source$ = filters.search
+            ? productsApi.search(filters.search, store.limit())
+            : filters.category
+              ? productsApi.getByCategory(filters.category)
+              : productsApi.getAll({
+                  limit: store.limit(),
+                  skip: store.skip(),
+                  sortBy: filters.sortBy,
+                  order: filters.sortOrder,
+                });
+
+          return source$.pipe(
+            tapResponse({
+              // CONCEPT: setAllEntities() - Replaces ALL entities with a new set.
+              // patchState composability: entity operations and regular state patches
+              // can be combined in a single patchState call for atomic updates.
+              next: (response) => {
+                patchState(store, setAllEntities(response.products), {
+                  total: response.total,
+                  loading: false,
+                });
+              },
+              error: (err: Error) => {
+                patchState(store, {
+                  loading: false,
+                  error: err.message || 'Failed to load products',
+                });
+              },
             })
           );
-        }
-
-        // CONCEPT: setAllEntities() - Replaces ALL entities with a new set.
-        // Use after a full list fetch. This clears old entities and sets new ones.
-        // patchState composability: entity operations and regular state patches
-        // can be combined in a single patchState call for atomic updates.
-        patchState(store, setAllEntities(response.products), {
-          total: response.total,
-          loading: false,
-        });
-      } catch (err) {
-        patchState(store, {
-          loading: false,
-          error: err instanceof Error ? err.message : 'Failed to load products',
-        });
-      }
-    },
+        })
+      )
+    ),
 
     async loadCategories() {
       try {
