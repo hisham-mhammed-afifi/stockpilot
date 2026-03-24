@@ -139,7 +139,7 @@ export class ShellComponent implements OnInit, OnDestroy {
   navItems: NavItem[] = [
     { label: 'Home', route: '/', icon: 'home', disabled: false },
     { label: 'Signals Playground', route: '/signals-playground', icon: 'science', disabled: false },
-    { label: 'Products', route: '/products', icon: 'shopping_bag', disabled: true, section: 'Section 3 - Coming Soon' },
+    { label: 'Products', route: '/products', icon: 'shopping_bag', disabled: false },
     { label: 'Inventory', route: '/inventory', icon: 'inventory_2', disabled: true, section: 'Section 4 - Coming Soon' },
     { label: 'Orders', route: '/orders', icon: 'receipt_long', disabled: true, section: 'Section 6 - Coming Soon' },
     { label: 'Order Builder', route: '/order-builder', icon: 'add_shopping_cart', disabled: true, section: 'Section 7 - Coming Soon' },

@@ -1,13 +1,8 @@
-import { Component } from '@angular/core';
 import { Routes } from '@angular/router';
-
-@Component({
-  selector: 'app-products-placeholder',
-  standalone: true,
-  template: `<h2>Section 3 - Products</h2><p>Coming Soon</p>`,
-})
-class ProductsPlaceholderComponent {}
+import { ProductsComponent } from './products.component';
+import { ProductDetailComponent } from './product-detail.component';
 
 export const productsRoutes: Routes = [
-  { path: '', component: ProductsPlaceholderComponent },
+  { path: '', component: ProductsComponent },
+  { path: ':id', component: ProductDetailComponent },
 ];
