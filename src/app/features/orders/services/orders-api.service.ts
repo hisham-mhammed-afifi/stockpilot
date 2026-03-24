@@ -32,4 +32,10 @@ export class OrdersApiService {
   deleteOrder(id: number): Observable<Cart> {
     return this.api.delete<Cart>(`/carts/${id}`);
   }
+
+  // CONCEPT: Architecture - POST /carts/add simulates creating an order.
+  // DummyJSON accepts the request and returns a response but does not persist.
+  createOrder(userId: number, products: { id: number; quantity: number }[]): Observable<Cart> {
+    return this.api.post<Cart>('/carts/add', { userId, products });
+  }
 }

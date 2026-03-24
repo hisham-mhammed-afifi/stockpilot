@@ -7,7 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { ThemeService } from '../theme/theme.store';
+import { ThemeStore } from '../theme/theme.store';
 
 interface NavItem {
   label: string;
@@ -38,8 +38,8 @@ interface NavItem {
       </button>
       <span class="app-name">StockPilot</span>
       <span class="spacer"></span>
-      <button mat-icon-button aria-label="Toggle theme" (click)="themeService.toggleTheme()">
-        <mat-icon>{{ themeService.icon() }}</mat-icon>
+      <button mat-icon-button aria-label="Toggle theme" (click)="themeStore.toggleTheme()">
+        <mat-icon>{{ themeStore.icon() }}</mat-icon>
       </button>
     </mat-toolbar>
 
@@ -129,7 +129,7 @@ interface NavItem {
   `,
 })
 export class ShellComponent implements OnInit, OnDestroy {
-  readonly themeService = inject(ThemeService);
+  readonly themeStore = inject(ThemeStore);
   private breakpointObserver = inject(BreakpointObserver);
   private subscription?: Subscription;
   private sidenav = viewChild<MatSidenav>('sidenav');
@@ -142,7 +142,7 @@ export class ShellComponent implements OnInit, OnDestroy {
     { label: 'Products', route: '/products', icon: 'shopping_bag', disabled: false },
     { label: 'Inventory', route: '/inventory', icon: 'inventory_2', disabled: false },
     { label: 'Orders', route: '/orders', icon: 'receipt_long', disabled: false },
-    { label: 'Order Builder', route: '/order-builder', icon: 'add_shopping_cart', disabled: true, section: 'Section 7 - Coming Soon' },
+    { label: 'Order Builder', route: '/order-builder', icon: 'add_shopping_cart', disabled: false },
     { label: 'Dashboard', route: '/dashboard', icon: 'dashboard', disabled: true, section: 'Section 9 - Coming Soon' },
   ];
 

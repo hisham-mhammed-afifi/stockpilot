@@ -1,13 +1,14 @@
-import { Component } from '@angular/core';
 import { Routes } from '@angular/router';
-
-@Component({
-  selector: 'app-order-builder-placeholder',
-  standalone: true,
-  template: `<h2>Section 7 - Order Builder</h2><p>Coming Soon</p>`,
-})
-class OrderBuilderPlaceholderComponent {}
+import { OrderBuilderComponent } from './components/order-builder.component';
+import { OrderBuilderStore } from './store/order-builder.store';
 
 export const orderBuilderRoutes: Routes = [
-  { path: '', component: OrderBuilderPlaceholderComponent },
+  {
+    path: '',
+    component: OrderBuilderComponent,
+    // CONCEPT: Feature-scoped store - The store is provided here, not at root.
+    // Angular creates a new instance when this route activates and destroys it
+    // when the user navigates away. This means fresh state every visit.
+    providers: [OrderBuilderStore],
+  },
 ];
