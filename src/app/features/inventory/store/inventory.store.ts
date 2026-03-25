@@ -1,4 +1,4 @@
-import { computed, inject } from '@angular/core';
+import { computed, inject, Injector } from '@angular/core';
 import { signalStore, withState, withComputed, withMethods, withHooks, patchState } from '@ngrx/signals';
 // CONCEPT: withEntities - Import entity management from @ngrx/signals/entities.
 // This gives us normalized storage and entity CRUD operations.
@@ -15,6 +15,7 @@ import { tapResponse } from '@ngrx/operators';
 import { ProductsApiService } from '../../products/services/products-api.service';
 import { Product } from '../../../shared/models/product.model';
 import { NotificationsStore } from '../../../core/notifications/notifications.store';
+import { StoreCoordinator } from '../../../core/coordination/store-coordinator.service';
 
 // CONCEPT: State Shape - Define the state interface separately.
 // This makes it clear what the store manages and helps with typing.
@@ -141,7 +142,12 @@ export const InventoryStore = signalStore(
   // CONCEPT: withMethods() - Adds methods to the store.
   // Methods can be synchronous (patchState) or async (rxMethod, covered in Section 6).
   // The store instance and injected services are available via the factory function.
-  withMethods((store, productsApi = inject(ProductsApiService), notifications = inject(NotificationsStore)) => ({
+  // CONCEPT: Circular dependency prevention - We inject Injector instead of StoreCoordinator directly.
+  // StoreCoordinator injects InventoryStore, and if InventoryStore also injected StoreCoordinator
+  // at construction time, Angular would throw a circular dependency error.
+  // By using injector.get(StoreCoordinator) lazily inside method bodies, the resolution
+  // happens at call time when all stores are already constructed.
+  withMethods((store, productsApi = inject(ProductsApiService), notifications = inject(NotificationsStore), injector = inject(Injector)) => ({
 
     // CONCEPT: patchState() - Immutably updates part of the state.
     // Only the specified properties are updated. The rest remain unchanged.
@@ -246,6 +252,7 @@ export const InventoryStore = signalStore(
         // CONCEPT: Global store coordination - Inventory store pushes a notification
         // to NotificationsStore. The notification bell in the toolbar updates automatically.
         notifications.showSuccess(`Product "${created.title}" added`);
+        injector.get(StoreCoordinator).onProductChange('product_added', created.title);
         return created;
       } catch (err) {
         patchState(store, {
@@ -267,6 +274,7 @@ export const InventoryStore = signalStore(
           loading: false,
         });
         notifications.showSuccess(`Product "${updated.title}" updated`);
+        injector.get(StoreCoordinator).onProductChange('product_updated', updated.title);
         return updated;
       } catch (err) {
         patchState(store, {
@@ -281,6 +289,9 @@ export const InventoryStore = signalStore(
     // If the deleted product was selected, clear the selection too.
     // We decrement total to keep stats accurate.
     async deleteProduct(id: number) {
+      // Capture title before removal so we can log it in the activity
+      const product = store.entityMap()[id];
+      const title = product?.title ?? `#${id}`;
       patchState(store, { loading: true, error: null });
       try {
         await firstValueFrom(productsApi.delete(id));
@@ -290,6 +301,7 @@ export const InventoryStore = signalStore(
           selectedProductId: store.selectedProductId() === id ? null : store.selectedProductId(),
         });
         notifications.showSuccess('Product deleted');
+        injector.get(StoreCoordinator).onProductChange('product_deleted', title);
         return true;
       } catch (err) {
         patchState(store, {

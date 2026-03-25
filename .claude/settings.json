@@ -7,7 +7,18 @@
       "Bash(find /d/POCs/angu/src -type f \\\\\\(-name *.ts -o -name *.html -o -name *.scss -o -name *.md \\\\\\))",
       "Bash(find d:/POCs/angu/docs/sections -type f -name *.md)",
       "Bash(node -e \"const path = require.resolve\\(''@angular/core''\\); console.log\\(path\\);\")",
-      "Bash(find /d/POCs/angu/src/app/shared/models -type f -name *.ts)"
+      "Bash(find /d/POCs/angu/src/app/shared/models -type f -name *.ts)",
+      "Bash(node_modules/.bin/ng build:*)",
+      "Bash(where node:*)",
+      "Bash(ls d:/POCs/angu/node_modules/.bin/ng*)",
+      "Bash(cmd.exe //c \"where node\")",
+      "Bash(export NVM_DIR=\"/c/Users/admin/AppData/Roaming/nvm\")",
+      "Read(//d/POCs/angu/**)",
+      "Read(//d/POCs/angu/$NVM_DIR/v*/**)",
+      "Read(//c/Users/Hesham.afifi/**)",
+      "Read(//d//**)",
+      "Bash(powershell.exe -Command \"Get-Command node -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source\")",
+      "Bash(powershell.exe -Command \"& {Get-Command node}\")"
     ]
   }
 }

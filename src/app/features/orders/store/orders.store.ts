@@ -1,4 +1,4 @@
-import { computed, inject } from '@angular/core';
+import { computed, inject, Injector } from '@angular/core';
 import {
   signalStore,
   withState,
@@ -18,6 +18,7 @@ import { pipe, tap, switchMap, concatMap, exhaustMap } from 'rxjs';
 import { tapResponse } from '@ngrx/operators';
 import { Order, OrderStatus, CartsResponse } from '../models/order.model';
 import { OrdersApiService } from '../services/orders-api.service';
+import { StoreCoordinator } from '../../../core/coordination/store-coordinator.service';
 
 // CONCEPT: rxMethod vs async/await - In Section 04, we used async methods for simple
 // fire-and-forget operations. rxMethod adds powerful flow control:
@@ -60,7 +61,9 @@ export const OrdersStore = signalStore(
     ),
   })),
 
-  withMethods((store, ordersApi = inject(OrdersApiService)) => ({
+  // CONCEPT: Circular dependency prevention - Same pattern as InventoryStore.
+  // We use Injector to lazily resolve StoreCoordinator at call time.
+  withMethods((store, ordersApi = inject(OrdersApiService), injector = inject(Injector)) => ({
 
     // ---------------------------------------------------------------
     // LOAD ORDERS -- switchMap
@@ -129,7 +132,8 @@ export const OrdersStore = signalStore(
           ordersApi.updateStatus(id, status).pipe(
             tapResponse({
               next: () => {
-                // Already updated optimistically -- nothing more to do
+                // Already updated optimistically -- log the activity
+                injector.get(StoreCoordinator).onOrderStatusChange(id, status);
               },
               error: (err: Error) => {
                 // CONCEPT: Rollback - Revert the optimistic update on failure.

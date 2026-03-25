@@ -1,4 +1,4 @@
-import { computed, effect, inject } from '@angular/core';
+import { computed, effect, inject, Injector } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { signalStore, withState, withComputed, withMethods, withHooks, patchState } from '@ngrx/signals';
@@ -8,6 +8,7 @@ import { pipe, switchMap, exhaustMap, tap, EMPTY } from 'rxjs';
 import { User } from '../../shared/models/user.model';
 import { AuthApiService } from './auth-api.service';
 import { AuthStatus, LoginRequest } from './auth.models';
+import { StoreCoordinator } from '../coordination/store-coordinator.service';
 
 // CONCEPT: Global State - AuthStore uses providedIn: 'root' so it lives for the
 // entire app lifetime. Guards, interceptors, components, and other stores can all
@@ -46,7 +47,9 @@ export const AuthStore = signalStore(
     isLoading: computed(() => store.status() === 'loading'),
   })),
 
-  withMethods((store, authApi = inject(AuthApiService), router = inject(Router)) => ({
+  // CONCEPT: Circular dependency prevention - StoreCoordinator injects AuthStore,
+  // so AuthStore cannot inject StoreCoordinator directly. We use Injector for lazy resolution.
+  withMethods((store, authApi = inject(AuthApiService), router = inject(Router), injector = inject(Injector)) => ({
     // CONCEPT: Login flow with exhaustMap - exhaustMap ignores new emissions while
     // a previous one is still in-flight. This prevents double-login on rapid clicks.
     // Compare with switchMap (cancels previous) and concatMap (queues all).
@@ -89,6 +92,9 @@ export const AuthStore = signalStore(
     ),
 
     logout() {
+      // CONCEPT: Coordinator call before state cleanup - We notify the coordinator
+      // BEFORE clearing state so it can still read the current user for logging.
+      injector.get(StoreCoordinator).onLogout();
       patchState(store, {
         user: null,
         accessToken: null,

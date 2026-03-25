@@ -12,6 +12,7 @@ import { Subscription } from 'rxjs';
 import { ThemeStore } from '../theme/theme.store';
 import { AuthStore } from '../auth/auth.store';
 import { NotificationsStore } from '../notifications/notifications.store';
+import { StoreCoordinator } from '../coordination/store-coordinator.service';
 
 interface NavItem {
   label: string;
@@ -214,6 +215,11 @@ export class ShellComponent implements OnInit, OnDestroy {
   readonly themeStore = inject(ThemeStore);
   readonly authStore = inject(AuthStore);
   readonly notificationsStore = inject(NotificationsStore);
+  // CONCEPT: Eager initialization - The coordinator uses effect() in its constructor.
+  // We inject it in the shell to ensure it's created early, even if no component
+  // directly depends on it. Without this, the coordinator's effect() for login
+  // detection wouldn't activate until some component happened to inject it.
+  private coordinator = inject(StoreCoordinator);
   private breakpointObserver = inject(BreakpointObserver);
   private subscription?: Subscription;
   private sidenav = viewChild<MatSidenav>('sidenav');

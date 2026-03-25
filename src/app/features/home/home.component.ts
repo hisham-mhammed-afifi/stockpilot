@@ -161,7 +161,7 @@ export class HomeComponent {
     this.snackBar.open(
       `Added product #${productId} to cart (event bubbled through 3 levels!)`,
       'Close',
-      { duration: 3000 },
+      { duration: 5000 },
     );
   }
 }
