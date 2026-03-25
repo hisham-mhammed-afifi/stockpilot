@@ -14,6 +14,7 @@ import { firstValueFrom, pipe, switchMap, tap } from 'rxjs';
 import { tapResponse } from '@ngrx/operators';
 import { ProductsApiService } from '../../products/services/products-api.service';
 import { Product } from '../../../shared/models/product.model';
+import { NotificationsStore } from '../../../core/notifications/notifications.store';
 
 // CONCEPT: State Shape - Define the state interface separately.
 // This makes it clear what the store manages and helps with typing.
@@ -140,7 +141,7 @@ export const InventoryStore = signalStore(
   // CONCEPT: withMethods() - Adds methods to the store.
   // Methods can be synchronous (patchState) or async (rxMethod, covered in Section 6).
   // The store instance and injected services are available via the factory function.
-  withMethods((store, productsApi = inject(ProductsApiService)) => ({
+  withMethods((store, productsApi = inject(ProductsApiService), notifications = inject(NotificationsStore)) => ({
 
     // CONCEPT: patchState() - Immutably updates part of the state.
     // Only the specified properties are updated. The rest remain unchanged.
@@ -242,6 +243,9 @@ export const InventoryStore = signalStore(
           loading: false,
           total: store.total() + 1,
         });
+        // CONCEPT: Global store coordination - Inventory store pushes a notification
+        // to NotificationsStore. The notification bell in the toolbar updates automatically.
+        notifications.showSuccess(`Product "${created.title}" added`);
         return created;
       } catch (err) {
         patchState(store, {
@@ -262,6 +266,7 @@ export const InventoryStore = signalStore(
         patchState(store, updateEntity({ id, changes: updated }), {
           loading: false,
         });
+        notifications.showSuccess(`Product "${updated.title}" updated`);
         return updated;
       } catch (err) {
         patchState(store, {
@@ -284,6 +289,7 @@ export const InventoryStore = signalStore(
           total: store.total() - 1,
           selectedProductId: store.selectedProductId() === id ? null : store.selectedProductId(),
         });
+        notifications.showSuccess('Product deleted');
         return true;
       } catch (err) {
         patchState(store, {

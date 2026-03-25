@@ -6,7 +6,8 @@
       "Bash(find /d/POCs/angu/src/app -type f \\\\\\(-name *.ts -o -name *.html -o -name *.scss \\\\\\))",
       "Bash(find /d/POCs/angu/src -type f \\\\\\(-name *.ts -o -name *.html -o -name *.scss -o -name *.md \\\\\\))",
       "Bash(find d:/POCs/angu/docs/sections -type f -name *.md)",
-      "Bash(node -e \"const path = require.resolve\\(''@angular/core''\\); console.log\\(path\\);\")"
+      "Bash(node -e \"const path = require.resolve\\(''@angular/core''\\); console.log\\(path\\);\")",
+      "Bash(find /d/POCs/angu/src/app/shared/models -type f -name *.ts)"
     ]
   }
 }

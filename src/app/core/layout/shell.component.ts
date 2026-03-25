@@ -5,16 +5,19 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatBadgeModule } from '@angular/material/badge';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ThemeStore } from '../theme/theme.store';
+import { AuthStore } from '../auth/auth.store';
+import { NotificationsStore } from '../notifications/notifications.store';
 
 interface NavItem {
   label: string;
   route: string;
   icon: string;
-  disabled: boolean;
-  section?: string;
+  requiresAuth: boolean;
 }
 
 @Component({
@@ -26,6 +29,8 @@ interface NavItem {
     MatListModule,
     MatIconModule,
     MatButtonModule,
+    MatMenuModule,
+    MatBadgeModule,
     RouterOutlet,
     RouterLink,
     RouterLinkActive,
@@ -38,9 +43,79 @@ interface NavItem {
       </button>
       <span class="app-name">StockPilot</span>
       <span class="spacer"></span>
+
+      <!-- CONCEPT: Global State - Reading NotificationsStore in the toolbar.
+           Any part of the app can push notifications; the bell reflects the count. -->
+      @if (authStore.isAuthenticated()) {
+        <button
+          mat-icon-button
+          [matBadge]="notificationsStore.unreadCount()"
+          [matBadgeHidden]="!notificationsStore.hasNotifications()"
+          matBadgeColor="warn"
+          matBadgeSize="small"
+          [matMenuTriggerFor]="notifMenu"
+          aria-label="Notifications"
+        >
+          <mat-icon>notifications</mat-icon>
+        </button>
+
+        <mat-menu #notifMenu="matMenu" class="notif-menu">
+          <div class="notif-header" mat-menu-item disabled>
+            <strong>Notifications</strong>
+          </div>
+          @for (notif of notificationsStore.visibleNotifications(); track notif.id) {
+            <button mat-menu-item (click)="notificationsStore.dismiss(notif.id)">
+              <mat-icon [class]="'notif-icon-' + notif.type">
+                @switch (notif.type) {
+                  @case ('success') { check_circle }
+                  @case ('error') { error }
+                  @case ('warning') { warning }
+                  @case ('info') { info }
+                }
+              </mat-icon>
+              <span>{{ notif.message }}</span>
+            </button>
+          } @empty {
+            <button mat-menu-item disabled>No notifications</button>
+          }
+          @if (notificationsStore.hasNotifications()) {
+            <button mat-menu-item (click)="notificationsStore.clearAll()">
+              <mat-icon>clear_all</mat-icon>
+              <span>Clear all</span>
+            </button>
+          }
+        </mat-menu>
+      }
+
       <button mat-icon-button aria-label="Toggle theme" (click)="themeStore.toggleTheme()">
         <mat-icon>{{ themeStore.icon() }}</mat-icon>
       </button>
+
+      <!-- CONCEPT: Global State - AuthStore drives the toolbar UI.
+           When authenticated, show user avatar + menu. Otherwise, show Login button. -->
+      @if (authStore.isAuthenticated()) {
+        <button mat-icon-button [matMenuTriggerFor]="userMenu" aria-label="User menu">
+          <img
+            [src]="authStore.userImage()"
+            [alt]="authStore.userFullName()"
+            class="user-avatar"
+          />
+        </button>
+        <mat-menu #userMenu="matMenu">
+          <div class="user-info" mat-menu-item disabled>
+            <strong>{{ authStore.userFullName() }}</strong>
+          </div>
+          <button mat-menu-item (click)="authStore.logout()">
+            <mat-icon>logout</mat-icon>
+            <span>Logout</span>
+          </button>
+        </mat-menu>
+      } @else {
+        <a mat-button routerLink="/login">
+          <mat-icon>login</mat-icon>
+          Login
+        </a>
+      }
     </mat-toolbar>
 
     <mat-sidenav-container class="sidenav-container">
@@ -52,13 +127,9 @@ interface NavItem {
       >
         <mat-nav-list>
           @for (item of navItems; track item.route) {
-            @if (item.disabled) {
-              <a mat-list-item [class.disabled-link]="true">
-                <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
-                <span matListItemTitle>{{ item.label }}</span>
-                <span matListItemLine class="coming-soon">{{ item.section }}</span>
-              </a>
-            } @else {
+            <!-- CONCEPT: Global State - Conditionally show nav items based on auth.
+                 Protected items only appear when the user is logged in. -->
+            @if (!item.requiresAuth || authStore.isAuthenticated()) {
               <a
                 mat-list-item
                 [routerLink]="item.route"
@@ -118,19 +189,31 @@ interface NavItem {
       background-color: rgba(0, 0, 0, 0.04);
     }
 
-    .disabled-link {
-      opacity: 0.5;
-      pointer-events: none;
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      object-fit: cover;
     }
 
-    .coming-soon {
-      font-size: 11px;
-      color: rgba(0, 0, 0, 0.54);
+    .user-info {
+      padding: 8px 16px;
     }
+
+    .notif-header {
+      padding: 8px 16px;
+    }
+
+    .notif-icon-success { color: #4caf50; }
+    .notif-icon-error { color: #f44336; }
+    .notif-icon-warning { color: #ff9800; }
+    .notif-icon-info { color: #2196f3; }
   `,
 })
 export class ShellComponent implements OnInit, OnDestroy {
   readonly themeStore = inject(ThemeStore);
+  readonly authStore = inject(AuthStore);
+  readonly notificationsStore = inject(NotificationsStore);
   private breakpointObserver = inject(BreakpointObserver);
   private subscription?: Subscription;
   private sidenav = viewChild<MatSidenav>('sidenav');
@@ -138,13 +221,13 @@ export class ShellComponent implements OnInit, OnDestroy {
   isMobile = signal(false);
 
   navItems: NavItem[] = [
-    { label: 'Home', route: '/', icon: 'home', disabled: false },
-    { label: 'Signals Playground', route: '/signals-playground', icon: 'science', disabled: false },
-    { label: 'Products', route: '/products', icon: 'shopping_bag', disabled: false },
-    { label: 'Inventory', route: '/inventory', icon: 'inventory_2', disabled: false },
-    { label: 'Orders', route: '/orders', icon: 'receipt_long', disabled: false },
-    { label: 'Order Builder', route: '/order-builder', icon: 'add_shopping_cart', disabled: false },
-    { label: 'Dashboard', route: '/dashboard', icon: 'dashboard', disabled: true, section: 'Section 9 - Coming Soon' },
+    { label: 'Home', route: '/', icon: 'home', requiresAuth: false },
+    { label: 'Signals Playground', route: '/signals-playground', icon: 'science', requiresAuth: false },
+    { label: 'Products', route: '/products', icon: 'shopping_bag', requiresAuth: false },
+    { label: 'Inventory', route: '/inventory', icon: 'inventory_2', requiresAuth: true },
+    { label: 'Orders', route: '/orders', icon: 'receipt_long', requiresAuth: true },
+    { label: 'Order Builder', route: '/order-builder', icon: 'add_shopping_cart', requiresAuth: true },
+    { label: 'Dashboard', route: '/dashboard', icon: 'dashboard', requiresAuth: true },
   ];
 
   ngOnInit(): void {
