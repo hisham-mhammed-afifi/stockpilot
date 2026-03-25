@@ -106,8 +106,6 @@ import { AuthStore } from '../../core/auth/auth.store';
       display: flex;
       justify-content: center;
       align-items: center;
-      min-height: 60vh;
-      padding: 24px;
     }
 
     .login-card {
@@ -160,8 +158,8 @@ import { AuthStore } from '../../core/auth/auth.store';
 export class LoginComponent {
   readonly authStore = inject(AuthStore);
 
-  username = '';
-  password = '';
+  username = 'emilys';
+  password = 'emilyspass';
   hidePassword = signal(true);
 
   onLogin() {

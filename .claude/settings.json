@@ -18,7 +18,13 @@
       "Read(//c/Users/Hesham.afifi/**)",
       "Read(//d//**)",
       "Bash(powershell.exe -Command \"Get-Command node -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source\")",
-      "Bash(powershell.exe -Command \"& {Get-Command node}\")"
+      "Bash(powershell.exe -Command \"& {Get-Command node}\")",
+      "Bash(find /d/POCs/angu/src -type f -name *markdown* -o -name *guide*)",
+      "Bash(grep -r \"marked\\\\|markdown\\\\|ngx-markdown\" /d/POCs/angu/src --include=*.ts)",
+      "Bash(head -1 public/guides/section-*.md)",
+      "Bash(find /d/POCs/angu/src/app -type f \\\\\\(-name *layout* -o -name *shell* -o -name *sidenav* -o -name *sidebar* -o -name *nav* -o -name *app.component* \\\\\\))",
+      "Bash(find /d/POCs/angu/src/app/core -type f -name *.ts)",
+      "Bash(find /d/POCs/angu/src/app/features -name *.component.ts)"
     ]
   }
 }
