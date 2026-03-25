@@ -111,6 +111,7 @@ interface NavItem {
 
     .content {
       padding: 24px;
+      box-sizing: border-box;
     }
 
     .active-link {
