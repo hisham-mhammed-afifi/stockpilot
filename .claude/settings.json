@@ -24,7 +24,19 @@
       "Bash(head -1 public/guides/section-*.md)",
       "Bash(find /d/POCs/angu/src/app -type f \\\\\\(-name *layout* -o -name *shell* -o -name *sidenav* -o -name *sidebar* -o -name *nav* -o -name *app.component* \\\\\\))",
       "Bash(find /d/POCs/angu/src/app/core -type f -name *.ts)",
-      "Bash(find /d/POCs/angu/src/app/features -name *.component.ts)"
+      "Bash(find /d/POCs/angu/src/app/features -name *.component.ts)",
+      "Bash(grep -rn \"@Input\\(\\)\\\\|@Output\\(\\)\\\\|@ViewChild\\\\|@ContentChild\" src/app --include=*.ts)",
+      "Bash(grep -rn \"BehaviorSubject\\\\|ReplaySubject\" src/app --include=*.ts)",
+      "Bash(grep -rn CommonModule src/app --include=*.ts)",
+      "Bash(grep -rn @NgModule src/app --include=*.ts)",
+      "Bash(grep -rn \"| async\" src/app --include=*.ts --include=*.html)",
+      "Bash(grep -rn \"from ''''@angular/material/\" src/app --include=\"*.ts\")",
+      "Bash(node -e \"const m = require\\(''@angular/material/toolbar''\\); console.log\\(Object.keys\\(m\\).filter\\(k => !k.startsWith\\(''_''\\)\\).join\\('', ''\\)\\)\")",
+      "Bash(node -e \"const m = require\\(''@angular/material/toolbar''\\); console.log\\(Object.keys\\(m\\).filter\\(k => k.startsWith\\(''Mat''\\)\\).join\\('', ''\\)\\)\")",
+      "Bash(node -e \"const m = require\\(''@angular/material/card''\\); console.log\\(Object.keys\\(m\\).filter\\(k => k.includes\\(''MatCard''\\)\\).join\\(''\\\\n''\\)\\)\")",
+      "Bash(grep export.*MatCardb node_modules/@angular/material/card/index.d.ts)",
+      "Bash(ls node_modules/@angular/material/*.d.ts)",
+      "Bash(find node_modules/@angular/material -name *.d.ts -path *card*)"
     ]
   }
 }

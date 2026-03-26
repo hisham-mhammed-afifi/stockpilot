@@ -1,11 +1,11 @@
 import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
 import { CurrencyPipe, TitleCasePipe } from '@angular/common';
-import { MatCardModule } from '@angular/material/card';
+import { MatCard, MatCardContent } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatIcon } from '@angular/material/icon';
+import { MatIconButton } from '@angular/material/button';
+import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
+import { MatTooltip } from '@angular/material/tooltip';
 import { Order, OrderStatus } from '../models/order.model';
 
 // CONCEPT: Architecture - This is a presentational (dumb) component.
@@ -18,12 +18,15 @@ import { Order, OrderStatus } from '../models/order.model';
   imports: [
     CurrencyPipe,
     TitleCasePipe,
-    MatCardModule,
+    MatCard,
+    MatCardContent,
     MatChipsModule,
-    MatIconModule,
-    MatButtonModule,
-    MatMenuModule,
-    MatTooltipModule,
+    MatIcon,
+    MatIconButton,
+    MatMenu,
+    MatMenuItem,
+    MatMenuTrigger,
+    MatTooltip,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `

@@ -8,14 +8,14 @@ import {
   untracked,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
+import { MatCard, MatCardHeader, MatCardContent, MatCardTitle, MatCardSubtitle } from '@angular/material/card';
+import { MatButton, MatIconButton } from '@angular/material/button';
+import { MatIcon } from '@angular/material/icon';
+import { MatFormField, MatLabel, MatPrefix } from '@angular/material/form-field';
+import { MatInput } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatDividerModule } from '@angular/material/divider';
+import { MatDivider } from '@angular/material/divider';
 import { BehaviorSubject, map } from 'rxjs';
 import { AsyncPipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -25,14 +25,21 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
   standalone: true,
   imports: [
     FormsModule,
-    MatCardModule,
-    MatButtonModule,
-    MatIconModule,
-    MatFormFieldModule,
-    MatInputModule,
+    MatCard,
+    MatCardHeader,
+    MatCardContent,
+    MatCardTitle,
+    MatCardSubtitle,
+    MatButton,
+    MatIconButton,
+    MatIcon,
+    MatFormField,
+    MatLabel,
+    MatPrefix,
+    MatInput,
     MatListModule,
     MatChipsModule,
-    MatDividerModule,
+    MatDivider,
     AsyncPipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -203,7 +210,7 @@ effect(() => {{ '{' }}
                 <mat-icon>chevron_left</mat-icon> Previous
               </button>
               <button mat-raised-button (click)="nextPage()">
-                Next <mat-icon>chevron_right</mat-icon>
+                Next <mat-icon iconPositionEnd>chevron_right</mat-icon>
               </button>
             </div>
           </div>
@@ -427,7 +434,7 @@ doubled = computed(
     }
 
     .discount-chip {
-      --mat-chip-label-text-color: #fff;
+      --mat-chip-label-text-color: var(--mat-sys-on-primary);
     }
 
     /* Part C: Effect Logger */
@@ -447,20 +454,20 @@ doubled = computed(
       align-items: center;
       gap: 8px;
       padding: 8px 12px;
-      background: #263238;
-      color: #fff;
+      background: var(--mat-sys-surface-container-highest);
+      color: var(--mat-sys-on-surface);
       font-family: 'Roboto Mono', monospace;
       font-size: 13px;
     }
 
     .clear-btn {
       margin-left: auto;
-      color: rgba(255, 255, 255, 0.7);
+      color: var(--mat-sys-on-surface-variant);
     }
 
     .console-body {
-      background: #1e1e1e;
-      color: #4ec9b0;
+      background: var(--mat-sys-surface-container);
+      color: var(--mat-sys-primary);
       font-family: 'Roboto Mono', monospace;
       font-size: 13px;
       padding: 12px;

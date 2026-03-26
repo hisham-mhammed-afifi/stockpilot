@@ -1,11 +1,11 @@
 import { Component, ChangeDetectionStrategy, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatCard, MatCardHeader, MatCardContent, MatCardTitle, MatCardSubtitle } from '@angular/material/card';
+import { MatFormField, MatLabel, MatSuffix } from '@angular/material/form-field';
+import { MatInput } from '@angular/material/input';
+import { MatButton, MatIconButton } from '@angular/material/button';
+import { MatIcon } from '@angular/material/icon';
+import { MatProgressBar } from '@angular/material/progress-bar';
 import { AuthStore } from '../../core/auth/auth.store';
 
 // CONCEPT: Architecture - The login component is a thin UI layer.
@@ -17,12 +17,19 @@ import { AuthStore } from '../../core/auth/auth.store';
   standalone: true,
   imports: [
     FormsModule,
-    MatCardModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressBarModule,
+    MatCard,
+    MatCardHeader,
+    MatCardContent,
+    MatCardTitle,
+    MatCardSubtitle,
+    MatFormField,
+    MatLabel,
+    MatSuffix,
+    MatInput,
+    MatButton,
+    MatIconButton,
+    MatIcon,
+    MatProgressBar,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `

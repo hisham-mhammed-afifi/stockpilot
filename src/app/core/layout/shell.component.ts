@@ -1,14 +1,15 @@
-import { Component, ChangeDetectionStrategy, inject, signal, viewChild, OnInit, OnDestroy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, viewChild } from '@angular/core';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
-import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatToolbar } from '@angular/material/toolbar';
 import { MatListModule } from '@angular/material/list';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatBadgeModule } from '@angular/material/badge';
+import { MatIcon } from '@angular/material/icon';
+import { MatIconButton, MatAnchor } from '@angular/material/button';
+import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
+import { MatBadge } from '@angular/material/badge';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { map } from 'rxjs';
 import { ThemeStore } from '../theme/theme.store';
 import { AuthStore } from '../auth/auth.store';
 import { NotificationsStore } from '../notifications/notifications.store';
@@ -26,12 +27,15 @@ interface NavItem {
   standalone: true,
   imports: [
     MatSidenavModule,
-    MatToolbarModule,
+    MatToolbar,
     MatListModule,
-    MatIconModule,
-    MatButtonModule,
-    MatMenuModule,
-    MatBadgeModule,
+    MatIcon,
+    MatIconButton,
+    MatAnchor,
+    MatMenu,
+    MatMenuItem,
+    MatMenuTrigger,
+    MatBadge,
     RouterOutlet,
     RouterLink,
     RouterLinkActive,
@@ -211,13 +215,13 @@ interface NavItem {
       padding: 8px 16px;
     }
 
-    .notif-icon-success { color: #4caf50; }
-    .notif-icon-error { color: #f44336; }
-    .notif-icon-warning { color: #ff9800; }
-    .notif-icon-info { color: #2196f3; }
+    .notif-icon-success { color: var(--mat-sys-primary); }
+    .notif-icon-error { color: var(--mat-sys-error); }
+    .notif-icon-warning { color: var(--mat-sys-tertiary); }
+    .notif-icon-info { color: var(--mat-sys-secondary); }
   `,
 })
-export class ShellComponent implements OnInit, OnDestroy {
+export class ShellComponent {
   readonly themeStore = inject(ThemeStore);
   readonly authStore = inject(AuthStore);
   readonly notificationsStore = inject(NotificationsStore);
@@ -227,10 +231,14 @@ export class ShellComponent implements OnInit, OnDestroy {
   // detection wouldn't activate until some component happened to inject it.
   private coordinator = inject(StoreCoordinator);
   private breakpointObserver = inject(BreakpointObserver);
-  private subscription?: Subscription;
   private sidenav = viewChild<MatSidenav>('sidenav');
 
-  isMobile = signal(false);
+  isMobile = toSignal(
+    this.breakpointObserver
+      .observe([Breakpoints.Handset, Breakpoints.TabletPortrait])
+      .pipe(map(result => result.matches)),
+    { initialValue: false }
+  );
 
   navItems: NavItem[] = [
     { label: 'Home', route: '/', icon: 'home', requiresAuth: false },
@@ -241,16 +249,6 @@ export class ShellComponent implements OnInit, OnDestroy {
     { label: 'Order Builder', route: '/order-builder', icon: 'add_shopping_cart', requiresAuth: true },
     { label: 'Dashboard', route: '/dashboard', icon: 'dashboard', requiresAuth: true },
   ];
-
-  ngOnInit(): void {
-    this.subscription = this.breakpointObserver
-      .observe([Breakpoints.Handset, Breakpoints.TabletPortrait])
-      .subscribe(result => this.isMobile.set(result.matches));
-  }
-
-  ngOnDestroy(): void {
-    this.subscription?.unsubscribe();
-  }
 
   toggleSidenav(): void {
     this.sidenav()?.toggle();

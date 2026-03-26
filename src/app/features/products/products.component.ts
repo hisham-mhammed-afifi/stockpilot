@@ -12,14 +12,14 @@ import { RouterLink } from '@angular/router';
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { firstValueFrom } from 'rxjs';
 
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
+import { MatFormField, MatLabel, MatPrefix, MatSuffix } from '@angular/material/form-field';
+import { MatInput } from '@angular/material/input';
+import { MatSelect, MatOption } from '@angular/material/select';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatCardModule } from '@angular/material/card';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatButton, MatIconButton } from '@angular/material/button';
+import { MatIcon } from '@angular/material/icon';
+import { MatCard, MatCardContent } from '@angular/material/card';
+import { MatProgressBar } from '@angular/material/progress-bar';
 import { MatChipsModule } from '@angular/material/chips';
 
 import { ProductsApiService } from './services/products-api.service';
@@ -32,14 +32,20 @@ import { EmptyStateComponent } from '../../shared/ui/empty-state/empty-state.com
     RouterLink,
     CurrencyPipe,
     DecimalPipe,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
+    MatFormField,
+    MatLabel,
+    MatPrefix,
+    MatSuffix,
+    MatInput,
+    MatSelect,
+    MatOption,
     MatButtonToggleModule,
-    MatButtonModule,
-    MatIconModule,
-    MatCardModule,
-    MatProgressBarModule,
+    MatButton,
+    MatIconButton,
+    MatIcon,
+    MatCard,
+    MatCardContent,
+    MatProgressBar,
     MatChipsModule,
     EmptyStateComponent,
   ],
@@ -144,7 +150,7 @@ import { EmptyStateComponent } from '../../shared/ui/empty-state/empty-state.com
         </button>
         <span class="page-indicator">Page {{ currentPage() }} of {{ totalPages() }}</span>
         <button mat-button [disabled]="currentPage() >= totalPages()" (click)="nextPage()">
-          Next <mat-icon>chevron_right</mat-icon>
+          Next <mat-icon iconPositionEnd>chevron_right</mat-icon>
         </button>
       </div>
     }

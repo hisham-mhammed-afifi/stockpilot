@@ -1,8 +1,7 @@
 import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { MatCardModule } from '@angular/material/card';
-import { MatIconModule } from '@angular/material/icon';
-import { MatListModule } from '@angular/material/list';
+import { MatCard, MatCardHeader, MatCardTitle, MatCardSubtitle } from '@angular/material/card';
+import { MatIcon } from '@angular/material/icon';
 
 interface GuideEntry {
   filename: string;
@@ -14,7 +13,7 @@ interface GuideEntry {
 @Component({
   selector: 'app-guide-list',
   standalone: true,
-  imports: [RouterLink, MatCardModule, MatIconModule, MatListModule],
+  imports: [RouterLink, MatCard, MatCardHeader, MatCardTitle, MatCardSubtitle, MatIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="guide-list">

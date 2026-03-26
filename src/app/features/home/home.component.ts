@@ -1,9 +1,9 @@
 import { Component, ChangeDetectionStrategy } from '@angular/core';
-import { MatCardModule } from '@angular/material/card';
+import { MatCard, MatCardHeader, MatCardTitle, MatCardSubtitle, MatCardContent } from '@angular/material/card';
 import { MatListModule } from '@angular/material/list';
-import { MatIconModule } from '@angular/material/icon';
+import { MatIcon } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { inject } from '@angular/core';
 import { ProductListBadComponent } from './product-list-bad.component';
 
@@ -11,11 +11,14 @@ import { ProductListBadComponent } from './product-list-bad.component';
   selector: 'app-home',
   standalone: true,
   imports: [
-    MatCardModule,
+    MatCard,
+    MatCardHeader,
+    MatCardTitle,
+    MatCardSubtitle,
+    MatCardContent,
     MatListModule,
-    MatIconModule,
+    MatIcon,
     MatChipsModule,
-    MatSnackBarModule,
     ProductListBadComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -110,10 +113,10 @@ import { ProductListBadComponent } from './product-list-bad.component';
       gap: 24px;
     }
     .bad-icon {
-      color: #f44336;
+      color: var(--mat-sys-error);
     }
     .good-icon {
-      color: #4caf50;
+      color: var(--mat-sys-primary);
     }
     .hierarchy-diagram {
       display: flex;

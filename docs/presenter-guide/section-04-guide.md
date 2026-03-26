@@ -1,246 +1,241 @@
-# Section 4: NgRx SignalStore - Core Concepts
+# Section 04: NgRx SignalStore - Core Concepts
 
-## Duration: ~30 minutes
+**Duration:** ~30 minutes
+**URL:** http://localhost:4200/inventory
+**Key Store File:** `src/app/features/inventory/store/inventory.store.ts` (331 lines)
 
 ---
 
 ## Pre-Section Checklist
 
-- [ ] App is running (`ng serve`)
-- [ ] Browser open at http://localhost:4200/inventory
+- [ ] Browser open at http://localhost:4200/inventory with data loaded (table of products visible)
 - [ ] Editor open to `src/app/features/inventory/store/inventory.store.ts`
-- [ ] Products have loaded in the inventory table (verify the stats bar shows numbers)
+- [ ] Editor split or second tab with `src/app/features/inventory/components/inventory-list.component.ts`
+- [ ] Angular DevTools extension installed and open (Components tab)
+- [ ] Network tab in DevTools cleared and ready
+- [ ] Terminal running `ng serve` with no errors
 
 ---
 
 ## Opening (2 min)
 
-**Say:** "In Section 3 we kept all state inside the component. That worked great for the products catalog. But inventory management needs CRUD operations, shared state across components, and data that survives navigation. This is where NgRx SignalStore gives us structure without boilerplate."
+> "We have seen Angular Signals for local state, and we have seen component-level patterns that start to break down at scale. Now we step into NgRx SignalStore, the recommended way to manage feature-level and global state in modern Angular apps. We will build up the mental model piece by piece: state, computed, methods, entities, and hooks. Everything lives in one file with a composable, functional API."
 
-**Context bridge:** "Remember the three extraction criteria from the last section? The inventory feature hits all three: multiple components share the data, we want filters to persist across navigation, and the logic (CRUD, pagination, stats) is complex enough to warrant separation."
+**Key talking point:** SignalStore is NOT classic NgRx with actions, reducers, and effects. It is a lightweight, signal-native store built from composable features. Each `with*()` call adds a specific capability.
 
 ---
 
 ## Demo Flow
 
-### Demo 1: Store Structure (~8 min)
+### Part 1: The signalStore() Shell (5 min)
 
-**Navigate to:** `src/app/features/inventory/store/inventory.store.ts`
+**Editor:** Open `src/app/features/inventory/store/inventory.store.ts`
 
-**Show in editor:**
+1. **Show the import block (lines 1-18).** Point out that everything comes from `@ngrx/signals` and `@ngrx/signals/entities`. There is no `@ngrx/store` or `@ngrx/effects` involved.
 
-- Open `src/app/features/inventory/store/inventory.store.ts`
-- Highlight lines 20-22: State Shape definition. Show the InventoryFilters type (lines 23-29) and InventoryState type (lines 35-44)
-- Highlight lines 31-34: CONCEPT comment about normalization. Explain that `products: Product[]` is gone, replaced by withEntities
-- Show lines 46-63: Initial state values. Point out how filters have sensible defaults.
-- Highlight lines 65-67: The signalStore() CONCEPT comment about composable architecture
-- Show line 68: `export const InventoryStore = signalStore(`
-- Highlight lines 69-71: CONCEPT about providedIn root scope
-- Show lines 74-77: withState() and what it does (each property becomes a Signal)
-- Show lines 79-83: withEntities<Product>() for normalized entity storage
-- Show lines 85-88: withComputed() introduction
-- Show lines 142-144: withMethods() introduction
-- Show lines 320-324: withHooks() with onInit
+2. **Scroll to line 68 -- the `signalStore()` call.** Explain the composition model:
+   ```
+   signalStore(
+     { providedIn: 'root' },   // line 72 -- DI scope
+     withState(initialState),   // line 77 -- base state
+     withEntities<Product>(),   // line 83 -- entity collection
+     withComputed(...),         // line 89 -- derived signals
+     withMethods(...),          // line 150 -- actions
+     withHooks(...)             // line 325 -- lifecycle
+   )
+   ```
 
-**Key talking point:**
+3. **Highlight line 72: `{ providedIn: 'root' }`.**
+   > "This makes the store a singleton, available anywhere via `inject(InventoryStore)`. For feature-scoped stores that should be destroyed when you leave a route, you would remove this and provide the store in route providers instead."
 
-> "signalStore() is a composition function. You build your store by stacking features: withState for data, withEntities for collections, withComputed for derivations, withMethods for actions, withHooks for lifecycle. The order matters because later features can access signals from earlier ones. This is not a class hierarchy. It is functional composition."
+**Audience check:** "Who here has used classic NgRx with actions and reducers? Notice there is none of that ceremony. The entire store is one function call."
 
-**CONCEPT spotlight:**
+### Part 2: State Shape and Initial Values (5 min)
 
-- Find the `// CONCEPT: signalStore()` comment at line 65 and read it aloud
-- Explain: Compare this to class-based services. There is no constructor, no manual dependency wiring between state and computed values. The store argument threads everything together automatically.
+**Editor:** Stay in `inventory.store.ts`, scroll to lines 23-63.
 
----
+1. **Show the `InventoryFilters` type (lines 23-29).** Point out the typed filter options: search, category, stockStatus, sortBy, sortOrder. These are not loose strings -- they are union types.
 
-### Demo 2: patchState in Action (~5 min)
+2. **Show the `InventoryState` type (lines 35-44).** Call out that `products: Product[]` is intentionally absent.
+   > "Notice there is no `products` array in the state. That is because `withEntities<Product>()` on line 83 replaces it with normalized storage. We will cover that in Section 05."
 
-**Navigate to:** `src/app/features/inventory/store/inventory.store.ts`, lines 150-185
+3. **Show `initialState` (lines 54-63).** Every field gets a sensible default. `loading: false`, `error: null`, `selectedProductId: null`.
 
-**Show in editor:**
+4. **Show line 77: `withState(initialState)`.** Explain:
+   > "Each property in `initialState` becomes a Signal on the store. So `store.loading()` returns `false`, `store.categories()` returns `[]`, and so on. You never write `store.loading = true` -- state is immutable."
 
-- Open `src/app/features/inventory/store/inventory.store.ts`
-- Highlight lines 152-155: CONCEPT comment about patchState immutability
-- Show lines 156-161: `setFilters()` method using the function form of patchState. Point out `skip: 0` resetting pagination.
-- Show lines 163-167: `selectProduct()` method using the simple object form of patchState
-- Show lines 169-185: Navigation methods (nextPage, prevPage, goToPage)
+**Browser:** Open Angular DevTools, find `InventoryListComponent`, and show the injected `InventoryStore`. Point out the signal values.
 
-**Show in browser:**
+### Part 3: withComputed -- Derived Signals (8 min)
 
-- Open http://localhost:4200/inventory
-- Change the search filter and watch the table update
-- Change the stock status toggle and observe client-side filtering
-- Click pagination buttons and watch the table update
-- Open DevTools console: point out there are no direct state mutations
+**Editor:** Scroll to lines 89-140.
 
-**Key talking point:**
+1. **Show `filteredProducts` (lines 93-107).** Walk through the logic:
+   - Reads `store.entities()` and `store.filters().stockStatus`
+   - Returns a filtered array based on stock thresholds
+   - Only recalculates when those specific signals change
 
-> "patchState has two forms. The simple form takes an object: `patchState(store, { selectedProductId: id })`. The function form gives you access to current state: `patchState(store, (state) => ({...}))`. Use the function form when the new value depends on the old value, like computing the next page offset."
+   > "This is client-side filtering. The stock status toggle in the UI does not trigger an API call. It just changes a filter signal, and `filteredProducts` recomputes instantly."
 
-**CONCEPT spotlight:**
+2. **Show `selectedProduct` (lines 112-115).** Highlight the `entityMap()` lookup:
+   ```typescript
+   return id ? store.entityMap()[id] ?? null : null;
+   ```
+   > "This is an O(1) dictionary lookup, not an O(n) array scan. For 1000 products, that matters."
 
-- Find the `// CONCEPT: patchState()` comment at line 152 and read it aloud
-- Explain: patchState is always immutable. It creates a new state object. You cannot accidentally mutate nested objects because the spread operator creates shallow copies.
+3. **Show pagination computed signals (lines 120-123).** Four one-liner computeds that derive `totalPages`, `currentPage`, `hasNextPage`, `hasPrevPage` from `skip`, `limit`, and `total`.
 
----
+4. **Show `stats` (lines 128-139).** Aggregated metrics derived from `store.entities()`.
 
-### Demo 3: Computed Signals (~5 min)
+**WOW MOMENT -- Browser demo:**
+- Navigate to http://localhost:4200/inventory
+- Click the "Low Stock" toggle in the Stock Status filter bar
+- The table filters instantly with no loading spinner, no network request
+- Open the Network tab to prove no HTTP call was made
+- Click "All" to restore
+- Now type a search term in the search field -- this one DOES hit the API (visible in Network tab)
 
-> **WOW MOMENT** - The stats bar auto-updates when entities change.
+> "See the difference? Stock status filtering is a computed signal. Search triggers `loadProducts()` which hits the API. The component does not know which is which -- it just calls `store.setFilters()` and lets the store decide."
 
-**Navigate to:** `src/app/features/inventory/store/inventory.store.ts`, lines 89-139
+### Part 4: withMethods -- Synchronous State Updates (5 min)
 
-**Show in editor:**
+**Editor:** Scroll to lines 150-185.
 
-- Open `src/app/features/inventory/store/inventory.store.ts`
-- Highlight lines 90-92: CONCEPT comment about client-side filtering with computed
-- Show lines 93-107: `filteredProducts` computed that filters by stock status
-- Highlight lines 109-111: CONCEPT about entityMap() for O(1) lookups
-- Show lines 112-115: `selectedProduct` computed using entityMap()
-- Highlight lines 117-119: CONCEPT about pagination helpers
-- Show lines 120-123: totalPages, currentPage, hasNextPage, hasPrevPage
-- Highlight lines 125-127: CONCEPT about stats computed
-- Show lines 128-139: The stats computed that aggregates totalProducts, inStock, lowStock, outOfStock, averagePrice
+1. **Show `setFilters` (lines 156-161).** Explain `patchState`:
+   ```typescript
+   patchState(store, (state) => ({
+     filters: { ...state.filters, ...filters },
+     skip: 0,
+   }));
+   ```
+   > "patchState is the ONLY way to update state. It is immutable -- it merges your changes into a new state object. Notice the function form `(state) => ({...})` which gives you access to the current state for computed patches. And we reset `skip` to 0 whenever filters change."
 
-**Show in browser:**
+2. **Show `selectProduct` (line 165-167).** Contrast with the function form:
+   ```typescript
+   patchState(store, { selectedProductId: id });
+   ```
+   > "When you do not need the current state, you can pass an object literal directly. Both forms are valid."
 
-- Open http://localhost:4200/inventory
-- Point to the stats bar at the top (Total Products, In Stock, Low Stock, Out of Stock)
-- Change the stock status filter to "Low Stock" and observe the table filters client-side
-- Point out that the stats bar still shows the full counts (it reads from unfiltered entities)
+3. **Show pagination methods (lines 169-185).** `nextPage`, `prevPage`, `goToPage` -- all one-liner patchState calls with bounds checking.
 
-**Key talking point:**
+**Browser demo:**
+- Click the "Next" pagination button at the bottom of the inventory table
+- Watch the page number update ("Page 2 of N")
+- Click a product's "eye" icon to select it -- the detail panel appears at the bottom
+- Click the X to close it
 
-> "Computed signals in SignalStore are lazy and cached. The stats computed only recalculates when store.entities() or store.total() changes, not when store.loading() or store.filters() changes. Angular's signal system tracks the exact dependencies. This is fine-grained reactivity without any manual optimization."
+### Part 5: withHooks -- Lifecycle (3 min)
 
-**CONCEPT spotlight:**
+**Editor:** Scroll to lines 325-330.
 
-- Find the `// CONCEPT: Computed - Summary stats` comment at line 125 and read it aloud
-- Explain: entityMap() gives O(1) lookups by ID. For 1000 products, `entityMap()[id]` is roughly 1000x faster than `products.find(p => p.id === id)`.
+```typescript
+withHooks({
+  onInit(store) {
+    store.loadProducts();
+    store.loadCategories();
+  },
+}),
+```
 
----
+> "onInit fires when the store is first injected. For a root-provided store, that is when the first component that uses it is created. Both data loads kick off automatically -- the component does not need to call them manually."
 
-### Demo 4: Dumb Component Pattern (~5 min)
+**Browser demo:**
+- Hard-refresh the page (Ctrl+Shift+R)
+- Watch the Network tab: two API calls fire immediately (`/products` and `/products/categories`)
+- The table populates and the category dropdown fills in
 
-**Navigate to:** `src/app/features/inventory/components/inventory-list.component.ts`
+### Part 6: Component Integration (5 min)
 
-**Show in editor:**
+**Editor:** Open `src/app/features/inventory/components/inventory-list.component.ts`
 
-- Open `src/app/features/inventory/components/inventory-list.component.ts`
-- Highlight lines 44-45: CONCEPT comment about the template reading signals from the store
-- Show lines 48-54: Stats bar reading `store.stats().totalProducts` directly in the template
-- Highlight lines 125-126: CONCEPT comment about the component being purely presentational
-- Show lines 135-137: CONCEPT about dumb component handlers
-- Scroll to lines 225-227: CONCEPT about store signal reads in template, showing Edit/Delete action buttons
+1. **Show line 538:** `protected readonly store = inject(InventoryStore);`
+   > "One line. The component now has access to every signal and method on the store."
 
-**Key talking point:**
+2. **Show the template (lines 50-311).** Point out how signals are read directly:
+   - `store.stats().totalProducts` (line 58)
+   - `store.filters().search` (line 91)
+   - `store.loading()` (line 159)
+   - `store.filteredProducts()` (line 182) as the table data source
+   - `store.selectedProduct()` (line 284) for the detail panel
 
-> "This component has zero business logic. It injects the store, reads signals in the template, and delegates every user action back to the store. Search changes? Call store.setFilters(). Delete clicked? Call store.deleteProduct(). The component does not know HOW filtering works or WHERE products come from. This separation makes testing trivial: you can test the store in isolation without any DOM."
+3. **Show the handler methods (lines 553-592).** Each one is a one-liner that delegates to the store:
+   ```typescript
+   onSearchChange(term: string) {
+     this.store.setFilters({ search: term });
+     this.store.loadProducts();
+   }
+   ```
+   > "The component is purely presentational. It reads signals and calls methods. Zero business logic."
 
-**CONCEPT spotlight:**
-
-- Find the `// CONCEPT: Architecture` comment at line 44 and read it aloud
-- Explain: This is the "smart store, dumb component" pattern. The store handles logic. The component handles display. If you swap the UI framework, only the component changes.
-
----
-
-### Demo 5: withHooks onInit (~3 min)
-
-**Navigate to:** `src/app/features/inventory/store/inventory.store.ts`, lines 320-330
-
-**Show in editor:**
-
-- Open `src/app/features/inventory/store/inventory.store.ts`
-- Highlight lines 320-324: CONCEPT comment about withHooks lifecycle
-- Show lines 325-329: The onInit hook calling `store.loadProducts()` and `store.loadCategories()`
-
-**Show in browser:**
-
-- Open http://localhost:4200/inventory
-- Watch the network tab: products and categories load automatically
-- Navigate away and back: data is already cached in the root-provided store (no re-fetch)
-
-**Key talking point:**
-
-> "withHooks gives your store lifecycle awareness. onInit runs when the store is first created. For a root-provided store, that is the moment the first component injects it. Data loads automatically without the component needing to call anything in ngOnInit. This is self-initializing state."
-
-**CONCEPT spotlight:**
-
-- Find the `// CONCEPT: withHooks()` comment at line 320 and read it aloud
-- Explain: For feature-scoped stores (provided via route), onInit fires when the route loads and the store is destroyed when navigating away. We use root scope here because inventory data may be shared across features.
-
----
-
-### Demo 6: signalStore vs signal service (~4 min)
-
-**Navigate to:** `src/app/features/inventory/store/inventory.store.ts`, lines 252-254
-
-**Show in editor:**
-
-- Open `src/app/features/inventory/store/inventory.store.ts`
-- Highlight lines 252-254: CONCEPT comment comparing signalStore to signal services
-- Remind the audience of the ThemeService from Section 2 (a simple injectable with signals)
-
-**Key talking point:**
-
-> "A signal service is a plain @Injectable with signal(), computed(), and methods. SignalStore adds structure: withState enforces an initial shape, patchState ensures immutability, withComputed groups derivations, withHooks adds lifecycle. For two or three signals, a service is fine. For a feature with 10+ state properties, CRUD, pagination, and computed stats, SignalStore pays for itself in maintainability."
-
-**Audience Interaction:**
-
-- Ask: "Looking at the inventory store, could we have built this as a plain signal service? What would we lose?"
-- Expected answers: We would lose patchState immutability guarantees, the composable with*() structure, and the entity management from withEntities.
+4. **Show `displayedColumns` (line 548).** The only local state in the entire component is an array of column names.
 
 ---
 
 ## Audience Interaction Points
 
-- **Ask the audience:** "What is the biggest state management pain point in your current Angular projects?"
-- **Poll/show of hands:** "Who is currently using NgRx Store (the class-based one with actions and reducers)? Who is using plain services? Who has no state management at all?"
-- **Challenge:** "Look at the stats computed (line 128). If we add a new product, which computed signals will recalculate? Which will not?" (Answer: stats and filteredProducts recalculate because they depend on entities(). Pagination computeds like totalPages also update because they depend on total(). But selectedProduct does not, unless the new product happens to be selected.)
+- **After Part 1:** "Quick poll -- has anyone tried managing complex state with just Angular Signals and services? What problems did you hit?" (Expected: synchronization issues, no standard patterns)
+- **After Part 3:** "Can you think of other computed signals you might add to this store?" (Expected: total value of inventory, most expensive product, category counts)
+- **After Part 6:** "What would break if the component tried to call patchState directly instead of going through store methods?" (Answer: it cannot -- patchState requires the internal store reference)
 
 ---
 
 ## Common Questions & Answers
 
-**Q: Is SignalStore a replacement for NgRx Store (the classic one with actions/reducers)?**
-A: It is a different tool for different scales. SignalStore is lighter and better for feature-level state. Classic NgRx Store is better when you need time-travel debugging, action logging, or when your team is already invested in the Redux pattern. They can coexist in the same app.
+**Q: How is this different from a plain service with signals?**
+A: SignalStore gives you a standard composition model (`with*` features), built-in entity management, rxMethod for async flow control, and DevTools integration. A plain service works for small cases but becomes ad-hoc at scale.
 
-**Q: Can I use SignalStore without entities?**
-A: Absolutely. withEntities is optional. If your store manages a form, a wizard, or settings (not a collection), skip withEntities and use plain withState.
+**Q: Can I have multiple instances of the same store?**
+A: Yes. Remove `providedIn: 'root'` and provide the store class in a component's or route's `providers` array. Each provider scope gets its own instance.
 
-**Q: How do I test a SignalStore?**
-A: Create it with `const store = new InventoryStore()` in your test (or use TestBed). Call methods, assert on signal values. No component DOM needed. This is one of the biggest advantages of separating state from components.
+**Q: What happens if two components inject the same root store?**
+A: They share the same instance. Both read the same signals and both see the same state updates. This is the point of a singleton store.
 
-**Q: What about devtools for debugging?**
-A: NgRx provides a devtools package (`@ngrx/signals/devtools`) that integrates with the Redux DevTools browser extension. We do not cover it in this workshop, but it provides state inspection and action logging.
+**Q: Is patchState synchronous?**
+A: Yes. The signal updates synchronously, and any computed signals that depend on the changed values recompute immediately. Templates re-render in the next change detection cycle.
+
+**Q: Where do async operations go?**
+A: In `withMethods`, using either `async/await` with `firstValueFrom()` or `rxMethod` for RxJS pipelines. We will cover rxMethod in depth in Section 06.
+
+---
+
+## Recovery Steps
+
+**If the inventory page shows no data:**
+1. Check the terminal for `ng serve` errors
+2. Open Network tab -- verify requests to `dummyjson.com/products` are succeeding
+3. Check the console for CORS or API errors
+4. Hard-refresh with Ctrl+Shift+R
+
+**If Angular DevTools does not show store signals:**
+1. Ensure you are running a development build (not production)
+2. Try closing and reopening DevTools
+3. The store itself is not a component -- look for the component that injects it (`InventoryListComponent`)
 
 ---
 
 ## Transition to Next Section
 
-**Say:** "We now have a store that manages products as plain state. But notice we are using withEntities, which gives us normalized storage. In Section 5, we will explore entity management in depth: adding, updating, deleting products with full CRUD operations and optimistic updates."
-
-**Action:** Keep the browser at http://localhost:4200/inventory and open `src/app/features/inventory/store/inventory.store.ts` scrolled to the entity methods (addProduct, updateProduct, deleteProduct)
+> "We have built the mental model: `withState` for base state, `withComputed` for derived signals, `withMethods` for updates, and `withHooks` for lifecycle. But we glossed over something important -- `withEntities`. That one line on line 83 replaces our entire product array with a normalized entity collection. In the next section, we will dig into what that means and how it powers full CRUD operations."
 
 ---
 
-## Section Cheat Sheet (for quick reference during delivery)
+## Section Cheat Sheet
 
-| Concept | Where to find it | Key line |
-| --- | --- | --- |
-| State Shape definition | `inventory.store.ts:20-22` | `type InventoryState = {...}` |
-| signalStore() composition | `inventory.store.ts:65-67` | `signalStore(withState, withComputed, withMethods, withHooks)` |
-| providedIn root | `inventory.store.ts:69-71` | `{ providedIn: 'root' }` |
-| withState() initial values | `inventory.store.ts:74-77` | `withState(initialState)` |
-| withEntities normalization | `inventory.store.ts:79-83` | `withEntities<Product>()` |
-| Client-side filtering | `inventory.store.ts:90-92` | `filteredProducts: computed(...)` |
-| entityMap() O(1) lookup | `inventory.store.ts:109-111` | `store.entityMap()[id]` |
-| Pagination computed | `inventory.store.ts:117-119` | `totalPages, currentPage, hasNextPage, hasPrevPage` |
-| Stats computed | `inventory.store.ts:125-127` | `stats: computed(() => {...})` |
-| withMethods() | `inventory.store.ts:142-144` | `withMethods((store, ...) => ({...}))` |
-| patchState() immutable | `inventory.store.ts:152-155` | `patchState(store, (state) => ({...}))` |
-| setAllEntities() | `inventory.store.ts:211-213` | `patchState(store, setAllEntities(response.products), {...})` |
-| withHooks onInit | `inventory.store.ts:320-324` | `onInit(store) { store.loadProducts(); }` |
-| Dumb component pattern | `inventory-list.component.ts:44-45` | `// The entire template reads signals from the store` |
-| Store injection | `inventory-list.component.ts:44-45` | `store = inject(InventoryStore)` |
-| signalStore vs service | `inventory.store.ts:252-254` | `// signalStore vs signal service comparison` |
+| Concept | Location | Line(s) |
+|---|---|---|
+| `signalStore()` composition | `inventory.store.ts` | 68 |
+| `providedIn: 'root'` | `inventory.store.ts` | 72 |
+| `withState(initialState)` | `inventory.store.ts` | 77 |
+| `withEntities<Product>()` | `inventory.store.ts` | 83 |
+| `withComputed` block | `inventory.store.ts` | 89-140 |
+| `filteredProducts` computed | `inventory.store.ts` | 93-107 |
+| `selectedProduct` via entityMap | `inventory.store.ts` | 112-115 |
+| Pagination computeds | `inventory.store.ts` | 120-123 |
+| `stats` computed | `inventory.store.ts` | 128-139 |
+| `patchState` (function form) | `inventory.store.ts` | 157-160 |
+| `patchState` (object form) | `inventory.store.ts` | 166 |
+| Pagination methods | `inventory.store.ts` | 169-185 |
+| `withHooks` onInit | `inventory.store.ts` | 325-330 |
+| Component inject | `inventory-list.component.ts` | 538 |
+| Template signal reads | `inventory-list.component.ts` | 58, 91, 159, 182, 284 |
+| Handler delegation | `inventory-list.component.ts` | 553-592 |

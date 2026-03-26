@@ -1,18 +1,18 @@
 import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { take } from 'rxjs';
 import { MatTableModule } from '@angular/material/table';
-import { MatCardModule } from '@angular/material/card';
-import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
+import { MatCard, MatCardContent, MatCardHeader, MatCardTitle, MatCardSubtitle } from '@angular/material/card';
+import { MatButton, MatIconButton } from '@angular/material/button';
+import { MatIcon } from '@angular/material/icon';
+import { MatFormField, MatLabel, MatPrefix } from '@angular/material/form-field';
+import { MatInput } from '@angular/material/input';
+import { MatSelect, MatOption } from '@angular/material/select';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatProgressBar } from '@angular/material/progress-bar';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatTooltip } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { InventoryStore, InventoryFilters } from '../store/inventory.store';
@@ -27,17 +27,24 @@ import { Product } from '../../../shared/models/product.model';
     CurrencyPipe,
     FormsModule,
     MatTableModule,
-    MatCardModule,
-    MatToolbarModule,
-    MatButtonModule,
-    MatIconModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
+    MatCard,
+    MatCardContent,
+    MatCardHeader,
+    MatCardTitle,
+    MatCardSubtitle,
+    MatButton,
+    MatIconButton,
+    MatIcon,
+    MatFormField,
+    MatLabel,
+    MatPrefix,
+    MatInput,
+    MatSelect,
+    MatOption,
     MatChipsModule,
-    MatProgressBarModule,
+    MatProgressBar,
     MatButtonToggleModule,
-    MatTooltipModule,
+    MatTooltip,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -268,7 +275,7 @@ import { Product } from '../../../shared/models/product.model';
           (click)="onPageChange(store.currentPage() + 1)"
         >
           Next
-          <mat-icon>chevron_right</mat-icon>
+          <mat-icon iconPositionEnd>chevron_right</mat-icon>
         </button>
       </div>
     }
@@ -331,9 +338,9 @@ import { Product } from '../../../shared/models/product.model';
       margin-top: 4px;
     }
 
-    .stat-card.in-stock .stat-value { color: #2e7d32; }
-    .stat-card.low-stock .stat-value { color: #ef6c00; }
-    .stat-card.out-of-stock .stat-value { color: #c62828; }
+    .stat-card.in-stock .stat-value { color: var(--mat-sys-primary); }
+    .stat-card.low-stock .stat-value { color: var(--mat-sys-tertiary); }
+    .stat-card.out-of-stock .stat-value { color: var(--mat-sys-error); }
 
     .filters-card {
       margin-bottom: 16px;
@@ -603,7 +610,7 @@ export class InventoryListComponent {
       } satisfies InventoryFormData,
     });
 
-    dialogRef.afterClosed().subscribe(async (result) => {
+    dialogRef.afterClosed().pipe(take(1)).subscribe(async (result) => {
       if (!result) return;
       const created = await this.store.addProduct(result);
       if (created) {
@@ -626,7 +633,7 @@ export class InventoryListComponent {
       } satisfies InventoryFormData,
     });
 
-    dialogRef.afterClosed().subscribe(async (result) => {
+    dialogRef.afterClosed().pipe(take(1)).subscribe(async (result) => {
       if (!result) return;
       const updated = await this.store.updateProduct(product.id, result);
       if (updated) {
@@ -648,7 +655,7 @@ export class InventoryListComponent {
       } satisfies ConfirmDialogData,
     });
 
-    dialogRef.afterClosed().subscribe(async (confirmed) => {
+    dialogRef.afterClosed().pipe(take(1)).subscribe(async (confirmed) => {
       if (!confirmed) return;
       const success = await this.store.deleteProduct(product.id);
       if (success) {

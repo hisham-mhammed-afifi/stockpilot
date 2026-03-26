@@ -1,10 +1,10 @@
 import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
+import { MatButton } from '@angular/material/button';
+import { MAT_DIALOG_DATA, MatDialogRef, MatDialogTitle, MatDialogContent, MatDialogActions } from '@angular/material/dialog';
+import { MatFormField, MatLabel, MatError } from '@angular/material/form-field';
+import { MatInput } from '@angular/material/input';
+import { MatSelect, MatOption } from '@angular/material/select';
 import { Product } from '../../../shared/models/product.model';
 
 // CONCEPT: Architecture - Dialog data defines the contract between the opener and the dialog.
@@ -20,11 +20,16 @@ export interface InventoryFormData {
   standalone: true,
   imports: [
     ReactiveFormsModule,
-    MatDialogModule,
-    MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
+    MatDialogTitle,
+    MatDialogContent,
+    MatDialogActions,
+    MatButton,
+    MatFormField,
+    MatLabel,
+    MatError,
+    MatInput,
+    MatSelect,
+    MatOption,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `

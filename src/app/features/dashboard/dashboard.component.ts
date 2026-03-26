@@ -1,12 +1,12 @@
 import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
 import { DatePipe, CurrencyPipe, KeyValuePipe, TitleCasePipe } from '@angular/common';
-import { MatCardModule } from '@angular/material/card';
-import { MatIconModule } from '@angular/material/icon';
+import { MatCard, MatCardContent, MatCardHeader, MatCardTitle } from '@angular/material/card';
+import { MatIcon } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatTableModule } from '@angular/material/table';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatCheckbox } from '@angular/material/checkbox';
+import { MatProgressBar } from '@angular/material/progress-bar';
 import { DashboardStore } from './store/dashboard.store';
 
 // CONCEPT: Architecture - Components never call API services directly. They go through the store.
@@ -20,13 +20,16 @@ import { DashboardStore } from './store/dashboard.store';
     CurrencyPipe,
     KeyValuePipe,
     TitleCasePipe,
-    MatCardModule,
-    MatIconModule,
+    MatCard,
+    MatCardContent,
+    MatCardHeader,
+    MatCardTitle,
+    MatIcon,
     MatListModule,
     MatTableModule,
     MatChipsModule,
-    MatCheckboxModule,
-    MatProgressBarModule,
+    MatCheckbox,
+    MatProgressBar,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -265,10 +268,10 @@ import { DashboardStore } from './store/dashboard.store';
         width: 40px;
         height: 40px;
 
-        &.products { color: #1976d2; }
-        &.orders { color: #7b1fa2; }
-        &.revenue { color: #388e3c; }
-        &.low-stock { color: #f57c00; }
+        &.products { color: var(--mat-sys-primary); }
+        &.orders { color: var(--mat-sys-secondary); }
+        &.revenue { color: var(--mat-sys-tertiary); }
+        &.low-stock { color: var(--mat-sys-error); }
       }
 
       .card-value {
@@ -303,7 +306,7 @@ import { DashboardStore } from './store/dashboard.store';
     }
 
     .stock-warn {
-      color: #f57c00;
+      color: var(--mat-sys-error);
       font-weight: 600;
     }
 

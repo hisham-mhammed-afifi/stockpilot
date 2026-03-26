@@ -5,13 +5,13 @@ import {
   CdkDrag,
   CdkDropList,
 } from '@angular/cdk/drag-drop';
-import { MatCardModule } from '@angular/material/card';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
+import { MatCard, MatCardContent } from '@angular/material/card';
+import { MatIcon } from '@angular/material/icon';
+import { MatButton } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatTabsModule } from '@angular/material/tabs';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatProgressBar } from '@angular/material/progress-bar';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatChipsModule } from '@angular/material/chips';
 import { OrdersStore } from '../store/orders.store';
 import { OrderCardComponent } from './order-card.component';
@@ -28,13 +28,13 @@ import { Order, OrderStatus } from '../models/order.model';
     CurrencyPipe,
     CdkDropList,
     CdkDrag,
-    MatCardModule,
-    MatIconModule,
-    MatButtonModule,
+    MatCard,
+    MatCardContent,
+    MatIcon,
+    MatButton,
     MatButtonToggleModule,
     MatTabsModule,
-    MatProgressBarModule,
-    MatSnackBarModule,
+    MatProgressBar,
     MatChipsModule,
     OrderCardComponent,
   ],

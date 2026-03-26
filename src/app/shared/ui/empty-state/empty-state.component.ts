@@ -1,12 +1,12 @@
 import { Component, ChangeDetectionStrategy, input } from '@angular/core';
-import { MatIconModule } from '@angular/material/icon';
+import { MatIcon } from '@angular/material/icon';
 
 // CONCEPT: Architecture - Reusable shared UI components live in shared/ui/.
 // They are purely presentational: no services, no state, just inputs and rendering.
 @Component({
   selector: 'app-empty-state',
   standalone: true,
-  imports: [MatIconModule],
+  imports: [MatIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="empty-state">

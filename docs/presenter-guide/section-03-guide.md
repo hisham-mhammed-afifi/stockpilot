@@ -1,238 +1,308 @@
-# Section 3: Component-Level State Patterns
+# Section 03: Component-Level State Patterns
 
-## Duration: ~30 minutes
+**Duration:** ~30 minutes
+**URL:** http://localhost:4200/products
+**Goal:** Show how `signal()`, `computed()`, `linkedSignal()`, `effect()`, and `resource()` work together inside a single component to handle search, filtering, sorting, pagination, and async data fetching with zero boilerplate.
 
 ---
 
 ## Pre-Section Checklist
 
-- [ ] App is running (`ng serve`)
-- [ ] Browser open at http://localhost:4200/products
-- [ ] Editor open to `src/app/features/products/products.component.ts`
-- [ ] API is reachable (products load on the catalog page)
+- [ ] `ng serve` running at http://localhost:4200/
+- [ ] Browser on http://localhost:4200/products
+- [ ] Editor open with `src/app/features/products/products.component.ts`
+- [ ] Also have `src/app/features/products/product-detail.component.ts` ready to open
+- [ ] Also have `src/app/features/products/services/products-api.service.ts` ready to open
+- [ ] DevTools Network tab visible (to observe fetches triggered by `resource()`)
 
 ---
 
 ## Opening (2 min)
 
-**Say:** "Now that we understand signals, computed, and effect as building blocks, let us see how they work together to manage real component state. This section is about knowing when you do NOT need a store or a service."
+> "In Section 02 we learned the signal primitives one at a time. Now we combine them in a real feature: the Products page. This single component has search with debounce, category filtering, sorting, pagination, and async data fetching. All of it is built with signals. No NgRx. No BehaviorSubject. No manual subscriptions."
 
-**Context bridge:** "In Section 2 we explored signals in isolation. Here we combine them into a complete component that handles search, filtering, pagination, and async data fetching with zero external state management."
+Load http://localhost:4200/products. Products should appear in a grid.
 
 ---
 
 ## Demo Flow
 
-### Demo 1: Products API Service (~3 min)
+### Demo 1: The API Service Layer (3 min)
 
-**Navigate to:** `src/app/features/products/services/products-api.service.ts`
+**Editor:**
 
-**Show in editor:**
+1. Open `src/app/features/products/services/products-api.service.ts`
+   - **Lines 6-9**: CONCEPT comment. Feature-specific API services wrap the generic `ApiService`. They return `Observable<T>` because `HttpClient` is Observable-based.
+   - **Lines 14-16**: `getAll()` takes params for pagination and sorting.
+   - **Lines 18-19**: `search()` takes a query string and limit.
+   - **Lines 22-24**: `getById()` fetches a single product.
+   - **Lines 26-28**: `getCategories()` fetches the category list.
+   - **Lines 30-32**: `getByCategory()` fetches products for one category.
 
-- Open `src/app/features/products/services/products-api.service.ts`
-- Highlight lines 6-9: The CONCEPT comment explaining feature-specific API services
-- Scroll through lines 14-32: Show the typed methods (`getAll`, `search`, `getById`, `getCategories`, `getByCategory`)
-- Highlight lines 34-35: CRUD methods map 1:1 to REST endpoints
+> "This is a thin layer. It maps REST endpoints to typed methods. The component never touches URLs or HttpClient directly. Compare this to Section 01 where `product-list-bad` called `HttpClient` inline."
 
-**Key talking point:**
+### Demo 2: Component State Signals (5 min)
 
-> "This service is intentionally thin. It wraps HttpClient calls with typed return values and nothing else. No caching, no state, no transformation. The component or store that consumes it decides how to handle the data. Methods return Observable because HttpClient is Observable-based, but we will bridge to Promises when feeding resource()."
+**Editor:**
 
-**CONCEPT spotlight:**
+1. Open `src/app/features/products/products.component.ts`
+   - **Lines 296-310**: Six signals that define the component's entire state:
+     ```
+     searchInput = signal('');           // raw keystrokes
+     searchTerm = signal('');            // debounced search
+     selectedCategory = signal('');      // active category filter
+     sortBy = signal('title');           // sort field
+     sortOrder = signal('asc');          // ascending or descending
+     pageSize = signal(12);             // items per page
+     ```
+   - **Lines 297-299**: CONCEPT comment. These signals are local to this component. They die when the component is destroyed. No service, no store needed for ephemeral UI state.
 
-- Find the `// CONCEPT: Architecture` comment at line 6 and read it aloud
-- Explain: Keeping API services thin means they are reusable across components and stores without coupling to a specific state management strategy
+**Browser:**
 
----
+1. Type "phone" in the search box. Products filter after a short debounce delay.
+2. Clear the search. Select a category from the dropdown (e.g., "smartphones"). Products change.
+3. Toggle the sort: click "Price", then the arrow button to switch between ascending and descending.
+4. Point out that all of these actions are just calling `.set()` on individual signals.
 
-### Demo 2: Products Catalog with resource() (~10 min)
+> "Six signals, zero subscriptions, zero manual change detection. Each signal holds one piece of UI state."
 
-> **WOW MOMENT** - This is the demo that shows the power of resource().
+### Demo 3: linkedSignal for Pagination Reset (5 min)
 
-**Navigate to:** `src/app/features/products/products.component.ts`
+**Editor:**
 
-**Show in editor:**
+1. Open `src/app/features/products/products.component.ts`
+   - **Lines 312-319**: `linkedSignal` for `currentPage`:
+     ```typescript
+     currentPage = linkedSignal({
+       source: () => ({ search: this.searchTerm(), category: this.selectedCategory() }),
+       computation: () => 1,
+     });
+     ```
+   - **Lines 312-314**: CONCEPT comment. Without `linkedSignal`, changing the search term while on page 3 would show empty results because the API would try to skip 24 items in a small result set.
 
-- Open `src/app/features/products/products.component.ts`
-- Highlight lines 291-294: Component State concept. These signals are local and ephemeral.
-- Highlight lines 298-304: The individual signals for search, category, sort, and page size
-- Scroll to lines 319-328: The `requestParams` computed that bundles all parameters into one signal
-- Highlight lines 330-340: The resource() CONCEPT comment. Read this block carefully with the audience.
-- Scroll to lines 341-359: The actual resource() call with its loader function
+**Browser:**
 
-**Show in browser:**
+1. Navigate to page 2 or 3 using the pagination buttons at the bottom.
+2. The page indicator shows "Page 2 of X" or "Page 3 of X".
+3. Now type something in the search box. Watch the page indicator snap back to "Page 1 of X".
+4. Clear the search, go to page 2 again, then select a category. Page resets to 1 again.
 
-- Open http://localhost:4200/products
-- Wait for products to load (resource fetches automatically)
-- Select a category from the dropdown and watch the grid update
-- Type a search term and watch results update after debounce
-- Point out there is no "loading = true; subscribe(); loading = false" pattern anywhere
+> **Wow moment:** "This is the same `linkedSignal()` pattern from the Signals Playground, but now it is solving a real UX problem. The `source` function tracks both `searchTerm` and `selectedCategory`. When either changes, the page resets to 1."
 
-**Key talking point:**
+### Demo 4: computed() for Request Parameters (3 min)
 
-> "resource() is declarative async. You describe WHAT data you need as a function of reactive inputs, and Angular handles the WHEN. When requestParams changes, the loader re-runs. You get .value(), .isLoading(), .error(), and .status() for free. Compare this to the imperative pattern where you manually set loading flags, subscribe, handle errors, and manage cleanup."
+**Editor:**
 
-**CONCEPT spotlight:**
+1. Open `src/app/features/products/products.component.ts`
+   - **Line 323**: `skip = computed(() => (this.currentPage() - 1) * this.pageSize());` -- derived pagination offset.
+   - **Lines 327-334**: `requestParams` bundles everything into one computed signal:
+     ```typescript
+     private requestParams = computed(() => ({
+       limit: this.pageSize(),
+       skip: this.skip(),
+       sortBy: this.sortBy(),
+       order: this.sortOrder(),
+       search: this.searchTerm(),
+       category: this.selectedCategory(),
+     }));
+     ```
 
-- Find the `// CONCEPT: resource()` comment at lines 330-340 and read it aloud
-- Explain: The trade-off with firstValueFrom is that it does not auto-cancel on new requests. In production, consider rxResource() for Observable cancellation.
+> "Instead of `resource()` tracking six separate signals, it watches one `requestParams` computed. When any upstream signal changes, `requestParams` recalculates, and `resource()` re-fetches. This is the funnel pattern: many signals feed into one computed that feeds into one resource."
 
-**Show in editor (categories resource):**
+### Demo 5: resource() for Declarative Data Fetching (5 min)
 
-- Scroll to lines 361-365: The categories resource has no params function
-- Explain: "No params means the loader runs once when the component initializes. Static data like category lists are a perfect use case."
+**Editor:**
 
----
+1. Open `src/app/features/products/products.component.ts`
+   - **Lines 336-365**: The `resource()` declaration:
+     ```typescript
+     products = resource({
+       params: this.requestParams,
+       loader: ({ params }) => {
+         if (params.search) {
+           return firstValueFrom(this.productsApi.search(params.search, params.limit));
+         }
+         if (params.category) {
+           return firstValueFrom(this.productsApi.getByCategory(params.category));
+         }
+         return firstValueFrom(this.productsApi.getAll({ ... }));
+       },
+     });
+     ```
+   - **Lines 337-345**: CONCEPT comment. `resource()` provides `.value()`, `.isLoading()`, `.error()`, `.status()` out of the box. No manual loading flags. No `takeUntilDestroyed`. No subscription cleanup.
+   - **Lines 369-371**: Categories resource (no params, fetched once):
+     ```typescript
+     categories = resource({
+       loader: () => firstValueFrom(this.productsApi.getCategories()),
+     });
+     ```
 
-### Demo 3: linkedSignal for Page Reset (~5 min)
+**Browser:**
 
-**Navigate to:** `src/app/features/products/products.component.ts`, lines 306-313
+1. Open DevTools Network tab.
+2. Type "laptop" in the search box. After the debounce delay, a single network request fires.
+3. Clear the search. Another request fires for the default product list.
+4. Select a category. Another request fires.
+5. Click "Price" sort toggle. Another request fires.
+6. Point out that each action triggers exactly one request, and the old request's data is replaced.
 
-**Show in editor:**
+**Editor (template integration):**
 
-- Open `src/app/features/products/products.component.ts`
-- Highlight lines 306-309: The CONCEPT comment explaining linkedSignal
-- Show lines 310-313: The linkedSignal implementation
+1. **Lines 55-57**: `@if (products.isLoading()) { <mat-progress-bar /> }` -- loading state from `resource()`.
+2. **Lines 98-106**: `@if (products.error(); as err) { ... }` -- error state with retry button calling `products.reload()`.
+3. **Lines 109-143**: `@if (products.value(); as data) { ... }` -- product grid from `resource()` value.
 
-**Show in browser:**
+> **Wow moment:** "Compare this to Section 01. There we had `loading = signal(false)` and manual `.set(true)` / `.set(false)` around every HTTP call. Here, `resource()` gives us `isLoading()`, `error()`, and `value()` for free."
 
-- Open http://localhost:4200/products
-- Click "Next" to navigate to page 2 or 3
-- Now type a search term in the search box
-- Watch the page reset to 1 automatically
-- Clear the search and select a category; page resets again
+### Demo 6: effect() for Debouncing (3 min)
 
-**Key talking point:**
+**Editor:**
 
-> "linkedSignal solves a real UX problem. Without it, searching while on page 3 shows empty results because the API returns fewer items. linkedSignal is writable (user can click Next/Prev) AND it auto-resets when its source signals change. computed() cannot do this because computed is read-only."
+1. Open `src/app/features/products/products.component.ts`
+   - **Lines 380-396**: The debounce effect in the constructor:
+     ```typescript
+     effect((onCleanup) => {
+       const value = this.searchInput();
+       if (value === '') {
+         this.searchTerm.set('');
+         return;
+       }
+       const timeout = setTimeout(() => this.searchTerm.set(value), 300);
+       onCleanup(() => clearTimeout(timeout));
+     });
+     ```
+   - **Lines 381-386**: CONCEPT comment. This is a valid use of `effect()` because it bridges user input timing to state updates. The `onCleanup` callback cancels the previous timeout if the user keeps typing.
 
-**CONCEPT spotlight:**
+**Browser:**
 
-- Find the `// CONCEPT: linkedSignal` comment at line 306 and read it aloud
-- Explain: This is one of the newest Angular primitives. Before linkedSignal, you needed an effect() with a manual set() call, which felt like a workaround.
+1. Open DevTools Network tab and clear it.
+2. Type "phone" quickly (4 characters in rapid succession). Only one network request fires (after 300ms of inactivity).
+3. Type one character at a time with pauses longer than 300ms. A request fires after each pause.
 
----
+> "The `effect()` tracks `searchInput`. Every keystroke fires the effect. But `onCleanup` cancels the previous timeout, so only the last keystroke (after 300ms of silence) actually updates `searchTerm`, which triggers the `resource()` re-fetch."
 
-### Demo 4: Product Detail with toSignal() (~5 min)
+### Demo 7: Product Detail - toSignal() and resource() with Route Params (4 min)
 
-**Navigate to:** `src/app/features/products/product-detail.component.ts`
+**Browser:**
 
-**Show in editor:**
+1. Click on any product card. The app navigates to `/products/:id`.
+2. The detail page shows product images, price, rating, description, reviews.
+3. Click a thumbnail image in the gallery. The main image changes.
+4. Click "Back to Products". Navigate to a different product.
 
-- Open `src/app/features/products/product-detail.component.ts`
-- Highlight lines 374-381: The CONCEPT comment about toSignal() bridging Observable to Signal
-- Show lines 378-381: toSignal() converting route params Observable to a Signal
-- Highlight lines 383-392: resource() using the route-derived signal as params
-- Show lines 394-404: Local UI state (selectedImageIndex) and computed (selectedImage)
+**Editor:**
 
-**Show in browser:**
+1. Open `src/app/features/products/product-detail.component.ts`
+   - **Lines 372-379**: `toSignal()` bridges the route Observable to a Signal:
+     ```typescript
+     private productId = toSignal(
+       this.route.paramMap.pipe(map(params => Number(params.get('id')))),
+       { initialValue: 0 },
+     );
+     ```
+   - **Lines 384-390**: `resource()` fetches the product using the route-derived signal:
+     ```typescript
+     product = resource<Product | null, number>({
+       params: () => this.productId(),
+       loader: ({ params: id }) => {
+         if (id === 0) return Promise.resolve(null);
+         return firstValueFrom(this.productsApi.getById(id));
+       },
+     });
+     ```
+   - **Line 394**: `selectedImageIndex = signal(0);` -- local UI state for the image gallery.
+   - **Lines 398-402**: `selectedImage` computed derives the current image URL:
+     ```typescript
+     selectedImage = computed(() => {
+       const p = this.product.value();
+       if (!p) return '';
+       return p.images[this.selectedImageIndex()] ?? p.thumbnail;
+     });
+     ```
 
-- Open http://localhost:4200/products/1
-- Show the product detail page loads with data from resource()
-- Click different thumbnail images; selectedImageIndex updates, main image changes
-- Navigate to http://localhost:4200/products/5; watch resource auto-fetch the new product
+> **Key takeaway:** "`toSignal()` is the bridge from Observable-land (router, HTTP) to Signal-land (resource, computed, template). The `initialValue` option avoids `undefined` types."
 
-**Key talking point:**
+### Demo 8: When NOT to Extract (2 min)
 
-> "toSignal() is the bridge between Angular's Observable-based APIs (Router, HttpClient, Forms) and the Signal world. Route params come as Observable. resource() needs a Signal. toSignal() creates that bridge. Always provide an initialValue to avoid undefined."
+**Editor:**
 
-**CONCEPT spotlight:**
+1. Open `src/app/features/products/products.component.ts`
+   - **Lines 435-441**: CONCEPT comment at the bottom of the file:
+     ```
+     // When to extract - Right now everything is in the component. That is fine!
+     // We would extract to a service/store ONLY if:
+     // 1. Another unrelated component needs the same data
+     // 2. We need the state to survive navigation (persist filters)
+     // 3. The logic is complex enough to warrant separation
+     // Section 4 will show when extraction becomes necessary.
+     ```
 
-- Find the `// CONCEPT: toSignal()` comment at line 374 and read it aloud
-- Explain: The initialValue of 0 means the resource guard (`if (id === 0)`) prevents a fetch before the route params emit
-
----
-
-### Demo 5: Effect for Debouncing (~3 min)
-
-**Navigate to:** `src/app/features/products/products.component.ts`, lines 374-389
-
-**Show in editor:**
-
-- Open `src/app/features/products/products.component.ts`
-- Highlight lines 375-380: The CONCEPT comment explaining the debounce pattern
-- Show lines 381-389: The effect() implementation with onCleanup
-
-**Key talking point:**
-
-> "This is a valid use of effect(). We are bridging user input timing to state updates. The effect tracks searchInput. Each keystroke sets a 300ms timeout. onCleanup cancels the previous timeout if the user types again. After 300ms of silence, searchTerm updates, which triggers the resource to re-fetch. The empty string case updates immediately for instant clearing."
-
-**Show in browser:**
-
-- Open http://localhost:4200/products
-- Type "phone" quickly and watch the network tab: only one request fires after you stop typing
-- Clear the search and watch results update immediately (no 300ms delay)
-
-**CONCEPT spotlight:**
-
-- Find the `// CONCEPT: effect() for debouncing` comment at line 375 and read it aloud
-- Explain: effect() is appropriate here because we are producing a side effect (updating searchTerm on a timer). Using computed() would not work because computed cannot set other signals.
-
----
-
-### Demo 6: When to Extract (~4 min)
-
-**Navigate to:** `src/app/features/products/products.component.ts`, lines 429-434
-
-**Show in editor:**
-
-- Open `src/app/features/products/products.component.ts`
-- Scroll to the bottom of the file, lines 429-434: The CONCEPT comment about extraction criteria
-
-**Key talking point:**
-
-> "Right now all the state lives inside the component. And that is fine. We would extract to a service or store ONLY if: (1) another unrelated component needs the same data, (2) we need the state to survive navigation, or (3) the logic is complex enough to warrant separation. Do not reach for a store just because you can. Section 4 will show what happens when extraction becomes necessary."
-
-**Audience Interaction:**
-
-- Ask: "In your projects, how do you decide when to extract state from a component?"
-- Let 2-3 people share their criteria before revealing the three rules from the CONCEPT comment
+> "Do not reach for a store until you need one. Keep state as local as possible. This component has 6 signals, 3 computeds, 2 resources, and 1 effect. It works perfectly without any external state management. Extraction happens when sharing or persistence is required."
 
 ---
 
 ## Audience Interaction Points
 
-- **Ask the audience:** "Who has written manual loading/error/success flag management before? How many lines of code did that take?"
-- **Poll/show of hands:** "How many of you have had the bug where changing a filter shows empty results because the page number was stale?"
-- **Challenge:** "Look at the resource() code. What happens if the API returns an error? Where does the error surface?" (Answer: resource provides .error() and .status() automatically)
+| When | What to Ask |
+|------|-------------|
+| After Demo 2 | "Which of these six signals would you classify as UI state vs component state? Does it matter?" (Answer: they are all component state; UI state would be something like `isDropdownOpen` that only matters to one template element.) |
+| After Demo 3 | "What would happen without `linkedSignal`? How would you solve the pagination reset problem with plain signals?" (Answer: you would need an `effect()` that watches search/category and calls `currentPage.set(1)`, which is the "effect to set signals" anti-pattern.) |
+| After Demo 5 | "How does `resource()` compare to a `switchMap` pipe in RxJS?" (Answer: similar concept. When new params arrive, the old request is conceptually replaced. `resource()` handles loading/error states automatically. For true Observable cancellation, use `rxResource()`.) |
+| After Demo 6 | "Is there a simpler way to debounce?" (Answer: you could use `toSignal(fromEvent(...).pipe(debounceTime(300)))`, but the `effect` + `onCleanup` approach keeps everything in signal-land without mixing Observable operators.) |
 
 ---
 
 ## Common Questions & Answers
 
-**Q: Why use firstValueFrom instead of just passing the Observable to resource()?**
-A: resource() expects a Promise-based loader. If you want Observable-native handling with auto-cancellation, use rxResource() instead. We use resource() here because it is simpler to teach and sufficient for most cases.
-
-**Q: Does resource() cancel the previous request when params change?**
-A: No, that is the trade-off mentioned in the CONCEPT comment. firstValueFrom does not cancel. For cancellation, use rxResource() which leverages Observable's built-in unsubscription. We cover rxResource patterns in Section 6.
-
-**Q: Why not use an effect() to reset the page instead of linkedSignal?**
-A: You could, but linkedSignal is more declarative. It expresses the relationship ("page depends on search and category") rather than the imperative action ("when search changes, set page to 1"). It is also writable, which effect-based solutions handle clumsily.
-
-**Q: When should I use toSignal() vs just subscribing in the component?**
-A: Use toSignal() when you need the value as a Signal (for resource params, computed, template binding). Use subscribe() when you need to perform side effects. In modern Angular, toSignal() is almost always the better choice.
+| Question | Answer |
+|----------|--------|
+| "Why `firstValueFrom()` instead of returning the Observable directly?" | `resource()` expects a `Promise` from its loader function. `HttpClient.get()` returns an `Observable`. `firstValueFrom()` converts the first emission to a Promise. For native Observable support, use `rxResource()` instead. |
+| "Does `resource()` cancel in-flight requests?" | The Promise-based `resource()` does not cancel HTTP requests because Promises are not cancellable. If you need cancellation (e.g., fast typing in search), use `rxResource()` which works with Observables and supports cancellation via unsubscribe. |
+| "Why two separate signals for `searchInput` and `searchTerm`?" | `searchInput` updates on every keystroke (for the input field binding). `searchTerm` updates after the 300ms debounce (for triggering the fetch). Separating them means the input stays responsive while the API is not hammered. |
+| "Can I use `resource()` outside a component?" | Yes. `resource()` can be used in a service or a `signalStore`. It needs an injection context (constructor or `runInInjectionContext`). |
+| "What happens to the resource when the component is destroyed?" | The resource is tied to the component's injector. When the component is destroyed, the resource's reactive context is cleaned up. No manual teardown needed. |
 
 ---
 
 ## Transition to Next Section
 
-**Say:** "We have seen how far you can go with just signals, computed, resource, and effect inside a single component. But what happens when multiple components need the same state? What happens when you need CRUD operations, pagination that survives navigation, and cross-feature coordination? That is where NgRx SignalStore comes in."
-
-**Action:** Navigate to http://localhost:4200/inventory and open `src/app/features/inventory/store/inventory.store.ts` in the editor
+> "We have now seen how to build a fully reactive component using only signal primitives and `resource()`. But what happens when two unrelated components need the same data? Or when you need state to survive navigation? That is where we graduate from component-level state to feature-level state with SignalStore. Let's move to Section 04."
 
 ---
 
-## Section Cheat Sheet (for quick reference during delivery)
+## Section Cheat Sheet
 
-| Concept | Where to find it | Key line |
-| --- | --- | --- |
-| Component State (local signals) | `products.component.ts:291-294` | `// These signals are local to this component` |
-| linkedSignal (page reset) | `products.component.ts:306-313` | `currentPage = linkedSignal({...})` |
-| resource() (async fetching) | `products.component.ts:330-359` | `products = resource({params: this.requestParams, ...})` |
-| resource() (categories, no params) | `products.component.ts:361-365` | `categories = resource({loader: () => ...})` |
-| toSignal() (Observable bridge) | `product-detail.component.ts:374-381` | `private productId = toSignal(...)` |
-| resource() with route params | `product-detail.component.ts:383-392` | `product = resource<Product \| null, number>({...})` |
-| Component UI state | `product-detail.component.ts:394-396` | `selectedImageIndex = signal(0)` |
-| effect() for debouncing | `products.component.ts:375-389` | `effect((onCleanup) => {...})` |
-| When to extract | `products.component.ts:429-434` | `// We would extract to a service/store ONLY if...` |
-| API service layer | `products-api.service.ts:6-9` | `// Feature-specific API services wrap the generic ApiService` |
+| Concept | File | Line(s) | What to Show |
+|---------|------|---------|--------------|
+| API service layer | `services/products-api.service.ts` | 6-9 | CONCEPT comment about architecture |
+| API methods (typed) | `services/products-api.service.ts` | 14-32 | `getAll`, `search`, `getById`, `getCategories`, `getByCategory` |
+| Component state signals | `products.component.ts` | 296-310 | Six local signals for search, filters, sort, pagination |
+| `linkedSignal` for page reset | `products.component.ts` | 316-319 | `currentPage` resets when search/category changes |
+| `computed` for skip offset | `products.component.ts` | 323 | `skip = computed(() => ...)` |
+| `computed` for request params | `products.component.ts` | 327-334 | Bundles all params into one signal |
+| `resource()` for products | `products.component.ts` | 347-365 | Declarative async fetch with auto loading/error |
+| `resource()` for categories | `products.component.ts` | 369-371 | One-shot fetch, no params |
+| `computed` for totalPages | `products.component.ts` | 375-378 | Derived from resource value |
+| `effect()` for debounce | `products.component.ts` | 387-395 | `onCleanup` cancels previous timeout |
+| `isLoading()` in template | `products.component.ts` | 55-57 | `@if (products.isLoading())` |
+| Error state with retry | `products.component.ts` | 98-106 | `products.error()` and `products.reload()` |
+| `toSignal()` from route params | `product-detail.component.ts` | 376-379 | Bridges Observable to Signal |
+| `resource()` with route param | `product-detail.component.ts` | 384-390 | Auto-fetches when route changes |
+| Local UI state (image gallery) | `product-detail.component.ts` | 394 | `selectedImageIndex = signal(0)` |
+| `computed` for selected image | `product-detail.component.ts` | 398-402 | Derives URL from product + index |
+| When NOT to extract | `products.component.ts` | 435-441 | CONCEPT comment about extraction criteria |
+
+*Note:* All line numbers reference files under `src/app/features/products/` unless a full path is given.
+
+---
+
+## Recovery Steps
+
+| Problem | Fix |
+|---------|-----|
+| Products page shows "Failed to load" | Check network access to `https://dummyjson.com`. Click the Retry button. Check DevTools Console for CORS or network errors. |
+| Search does not trigger after typing | The debounce is 300ms. Wait at least 300ms after the last keystroke. If still broken, check that the `effect()` at line 387 is present in the constructor. |
+| Pagination buttons are missing | Pagination only appears when `totalPages > 1` (line 146). With the default page size of 12 and a small result set, there may only be one page. Try clearing all filters. |
+| Category dropdown is empty | The `categories` resource (line 369) fetches from `/products/categories`. Check DevTools Network for that request. If it failed, the dropdown will be empty but the page still works. |
+| Product detail page shows skeleton forever | Check that the route `/products/:id` is configured. The `productId` signal has `initialValue: 0`, and the loader guards against `id === 0` (line 387 of `product-detail.component.ts`). If the route param never emits, the loader returns `null`. |
+| Image gallery thumbnails do not switch the main image | Click directly on a thumbnail. The `(click)="selectedImageIndex.set($index)"` handler is at line 81 of `product-detail.component.ts`. Verify the product has multiple images (some products have only one). |

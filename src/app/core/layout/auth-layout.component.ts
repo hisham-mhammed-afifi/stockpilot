@@ -1,7 +1,7 @@
 import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
-import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
+import { MatToolbar } from '@angular/material/toolbar';
+import { MatIcon } from '@angular/material/icon';
+import { MatIconButton, MatIconAnchor } from '@angular/material/button';
 import { RouterOutlet, RouterLink } from '@angular/router';
 import { ThemeStore } from '../theme/theme.store';
 
@@ -9,9 +9,10 @@ import { ThemeStore } from '../theme/theme.store';
   selector: 'app-auth-layout',
   standalone: true,
   imports: [
-    MatToolbarModule,
-    MatIconModule,
-    MatButtonModule,
+    MatToolbar,
+    MatIcon,
+    MatIconButton,
+    MatIconAnchor,
     RouterOutlet,
     RouterLink,
   ],

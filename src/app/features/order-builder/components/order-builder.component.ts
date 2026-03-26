@@ -1,18 +1,18 @@
 import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
+import { MatCard, MatCardContent, MatCardHeader, MatCardTitle, MatCardSubtitle, MatCardActions } from '@angular/material/card';
+import { MatButton, MatIconButton } from '@angular/material/button';
+import { MatIcon } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatBadgeModule } from '@angular/material/badge';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatFormField, MatLabel } from '@angular/material/form-field';
+import { MatInput } from '@angular/material/input';
+import { MatBadge } from '@angular/material/badge';
+import { MatProgressBar } from '@angular/material/progress-bar';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatDividerModule } from '@angular/material/divider';
+import { MatTooltip } from '@angular/material/tooltip';
+import { MatToolbar } from '@angular/material/toolbar';
+import { MatDivider } from '@angular/material/divider';
 
 import { OrderBuilderStore } from '../store/order-builder.store';
 import { Product } from '../../../shared/models/product.model';
@@ -26,18 +26,25 @@ import { Product } from '../../../shared/models/product.model';
   imports: [
     CurrencyPipe,
     FormsModule,
-    MatCardModule,
-    MatButtonModule,
-    MatIconModule,
+    MatCard,
+    MatCardContent,
+    MatCardHeader,
+    MatCardTitle,
+    MatCardSubtitle,
+    MatCardActions,
+    MatButton,
+    MatIconButton,
+    MatIcon,
     MatTableModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatBadgeModule,
-    MatProgressBarModule,
+    MatFormField,
+    MatLabel,
+    MatInput,
+    MatBadge,
+    MatProgressBar,
     MatChipsModule,
-    MatTooltipModule,
-    MatToolbarModule,
-    MatDividerModule,
+    MatTooltip,
+    MatToolbar,
+    MatDivider,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -160,13 +167,13 @@ import { Product } from '../../../shared/models/product.model';
               ({{ store.paginationInfo().total }} products)
             </span>
             <button mat-button (click)="onNextPage()" [disabled]="!store.hasNextPage()">
-              Next <mat-icon>chevron_right</mat-icon>
+              Next <mat-icon iconPositionEnd>chevron_right</mat-icon>
             </button>
           </div>
 
           <div class="step-actions">
             <button mat-raised-button color="primary" (click)="store.nextStep()" [disabled]="store.itemCount() === 0">
-              Next: Review Order <mat-icon>arrow_forward</mat-icon>
+              Next: Review Order <mat-icon iconPositionEnd>arrow_forward</mat-icon>
             </button>
           </div>
         </div>
@@ -251,7 +258,7 @@ import { Product } from '../../../shared/models/product.model';
               <mat-icon>arrow_back</mat-icon> Back
             </button>
             <button mat-raised-button color="primary" (click)="store.nextStep()">
-              Next: Confirm <mat-icon>arrow_forward</mat-icon>
+              Next: Confirm <mat-icon iconPositionEnd>arrow_forward</mat-icon>
             </button>
           </div>
         </div>

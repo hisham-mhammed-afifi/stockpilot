@@ -1,16 +1,17 @@
-import { Component, ChangeDetectionStrategy, inject, input, signal, effect, ViewEncapsulation } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, input, signal, effect, ViewEncapsulation, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatAnchor } from '@angular/material/button';
+import { MatIcon } from '@angular/material/icon';
+import { MatProgressBar } from '@angular/material/progress-bar';
 import { marked } from 'marked';
 
 @Component({
   selector: 'app-guide-viewer',
   standalone: true,
-  imports: [RouterLink, MatButtonModule, MatIconModule, MatProgressBarModule],
+  imports: [RouterLink, MatAnchor, MatIcon, MatProgressBar],
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
   template: `
@@ -147,8 +148,8 @@ import { marked } from 'marked';
     .markdown-body pre {
       margin: 12px 0;
       padding: 16px;
-      background: #1e1e1e;
-      color: #d4d4d4;
+      background: var(--mat-sys-surface-container-highest);
+      color: var(--mat-sys-on-surface);
       border-radius: 8px;
       overflow-x: auto;
     }
@@ -265,6 +266,7 @@ import { marked } from 'marked';
 export class GuideViewerComponent {
   private http = inject(HttpClient);
   private sanitizer = inject(DomSanitizer);
+  private destroyRef = inject(DestroyRef);
 
   filename = input.required<string>();
   loading = signal(false);
@@ -284,7 +286,9 @@ export class GuideViewerComponent {
     this.error.set(false);
     this.htmlContent.set(null);
 
-    this.http.get(`/guides/${name}.md`, { responseType: 'text' }).subscribe({
+    this.http.get(`/guides/${name}.md`, { responseType: 'text' }).pipe(
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe({
       next: async (markdown) => {
         const html = await marked.parse(markdown);
         this.htmlContent.set(this.sanitizer.bypassSecurityTrustHtml(html));

@@ -12,12 +12,11 @@ import { CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
 import { map } from 'rxjs';
 import { firstValueFrom } from 'rxjs';
 
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
+import { MatButton } from '@angular/material/button';
+import { MatIcon } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatListModule } from '@angular/material/list';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatProgressBar } from '@angular/material/progress-bar';
 
 import { ProductsApiService } from './services/products-api.service';
 import { Product } from '../../shared/models/product.model';
@@ -30,12 +29,11 @@ import { Product } from '../../shared/models/product.model';
     CurrencyPipe,
     DatePipe,
     DecimalPipe,
-    MatCardModule,
-    MatButtonModule,
-    MatIconModule,
+    MatButton,
+    MatIcon,
     MatChipsModule,
     MatListModule,
-    MatProgressBarModule,
+    MatProgressBar,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `

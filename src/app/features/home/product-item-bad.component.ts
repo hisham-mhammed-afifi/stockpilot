@@ -1,5 +1,5 @@
 import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
-import { MatCardModule } from '@angular/material/card';
+import { MatCard, MatCardHeader, MatCardTitle, MatCardSubtitle, MatCardContent, MatCardActions, MatCardImage } from '@angular/material/card';
 import { CurrencyPipe } from '@angular/common';
 import { Product } from '../../shared/models/product.model';
 import { ProductActionsBadComponent } from './product-actions-bad.component';
@@ -11,7 +11,7 @@ import { ProductActionsBadComponent } from './product-actions-bad.component';
 @Component({
   selector: 'app-product-item-bad',
   standalone: true,
-  imports: [MatCardModule, CurrencyPipe, ProductActionsBadComponent],
+  imports: [MatCard, MatCardHeader, MatCardTitle, MatCardSubtitle, MatCardContent, MatCardActions, MatCardImage, CurrencyPipe, ProductActionsBadComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <mat-card class="product-card">

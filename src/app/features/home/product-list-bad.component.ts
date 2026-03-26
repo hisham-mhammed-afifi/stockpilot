@@ -1,9 +1,9 @@
 import { Component, ChangeDetectionStrategy, inject, signal, output, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatBadgeModule } from '@angular/material/badge';
+import { MatProgressBar } from '@angular/material/progress-bar';
+import { MatButton } from '@angular/material/button';
+import { MatIcon } from '@angular/material/icon';
+import { MatBadge } from '@angular/material/badge';
 import { Product, ProductsResponse } from '../../shared/models/product.model';
 import { ProductItemBadComponent } from './product-item-bad.component';
 
@@ -13,7 +13,7 @@ import { ProductItemBadComponent } from './product-item-bad.component';
 @Component({
   selector: 'app-product-list-bad',
   standalone: true,
-  imports: [MatProgressBarModule, MatButtonModule, MatIconModule, MatBadgeModule, ProductItemBadComponent],
+  imports: [MatProgressBar, MatButton, MatIcon, MatBadge, ProductItemBadComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="list-header">

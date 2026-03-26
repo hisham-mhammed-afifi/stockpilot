@@ -1,232 +1,286 @@
-# Section 5: Entity Management & CRUD
+# Section 05: Entity Management & CRUD
 
-## Duration: ~30 minutes
+**Duration:** ~30 minutes
+**URL:** http://localhost:4200/inventory
+**Key Store File:** `src/app/features/inventory/store/inventory.store.ts` (331 lines)
 
 ---
 
 ## Pre-Section Checklist
 
-- [ ] App is running (`ng serve`)
-- [ ] Browser open at http://localhost:4200/inventory
-- [ ] Editor open with `src/app/features/inventory/store/inventory.store.ts`
-- [ ] Inventory table is loaded and displaying products
+- [ ] Browser open at http://localhost:4200/inventory with products loaded in the table
+- [ ] Editor open to `src/app/features/inventory/store/inventory.store.ts`
+- [ ] Second editor tab: `src/app/features/inventory/components/inventory-form.component.ts`
+- [ ] Third editor tab: `src/app/features/inventory/components/inventory-list.component.ts`
+- [ ] Network tab open and cleared
+- [ ] Console tab open (to watch for errors during CRUD demos)
 
 ---
 
 ## Opening (2 min)
 
-**Say:** "So far we have been managing arrays of data manually in our store. But what happens when you need to add, update, and delete items in that array? You end up writing the same boilerplate over and over. NgRx Signals has a built-in solution called `withEntities` that gives us normalized storage and free CRUD operations."
+> "In the previous section we saw `withEntities<Product>()` sitting on line 83 but skipped over it. That single line is doing a LOT of work under the hood. It replaces a flat `products: Product[]` array with a normalized data structure -- an ID array plus an entity map. And it gives us a toolkit of operations: `setAllEntities`, `addEntity`, `updateEntity`, `removeEntity`. These operations are what power our full CRUD workflow."
 
-**Context bridge:** "In Section 4 we built our first SignalStore with `withState`, `withComputed`, and `withMethods`. Now we are going to replace the raw products array with a normalized entity collection that gives us O(1) lookups and atomic CRUD operations."
+**Key talking point:** Entity normalization is a pattern borrowed from database design. Instead of scanning an array to find a product by ID, you look it up in a dictionary. O(1) instead of O(n).
 
 ---
 
 ## Demo Flow
 
-### Demo 1: withEntities Introduction (~5 min)
+### Part 1: Why Entities? The Normalization Model (5 min)
 
-**Navigate to:** `src/app/features/inventory/store/inventory.store.ts`
+**Editor:** Open `src/app/features/inventory/store/inventory.store.ts`
 
-**Show in editor:**
+1. **Show lines 31-34 -- the CONCEPT comment above `InventoryState`:**
+   ```typescript
+   // CONCEPT: Normalization - Notice that "products: Product[]" is GONE from the state.
+   // withEntities<Product>() replaces it with normalized storage:
+   //   { ids: number[], entityMap: Record<number, Product> }
+   // This gives O(1) lookups by ID instead of O(n) array.find().
+   ```
 
-- Open `src/app/features/inventory/store/inventory.store.ts`
-- Highlight lines 3-11: the imports from `@ngrx/signals/entities` -- `withEntities`, `setAllEntities`, `addEntity`, `updateEntity`, `removeEntity`
-- Scroll to lines 31-34: the CONCEPT comment explaining normalization. Point out that `products: Product[]` is gone from the state interface
-- Highlight lines 79-83: `withEntities<Product>()` in the store composition. Explain that this single line replaces a manual array and gives you `ids`, `entityMap`, and `entities` signals
+2. **Show line 83: `withEntities<Product>()`.**
+   > "This one line adds three signals to the store: `entities()` returns the array view (like the old `products` array), `entityMap()` returns the dictionary for O(1) lookups, and `ids()` returns just the ID array."
 
-**Key talking point:**
+3. **Draw the mental model on a whiteboard or slide:**
+   ```
+   Array approach:       [{ id: 1, ... }, { id: 2, ... }, { id: 3, ... }]
+                          find(p => p.id === 2)  --> scans all elements
 
-> "The key insight here is normalization. Instead of storing products as an array, `withEntities` stores them as `{ ids: number[], entityMap: Record<number, Product> }`. This means looking up a product by ID is O(1) instead of O(n). For a table with 1000 rows, that is roughly 1000x faster for lookups."
+   Entity approach:      ids: [1, 2, 3]
+                          entityMap: { 1: {...}, 2: {...}, 3: {...} }
+                          entityMap[2]  --> direct lookup
+   ```
 
-**CONCEPT spotlight:**
+4. **Show lines 5-11 -- the entity imports:**
+   ```typescript
+   import {
+     withEntities,
+     setAllEntities,
+     addEntity,
+     updateEntity,
+     removeEntity,
+   } from '@ngrx/signals/entities';
+   ```
+   > "Four operations, each one handles the normalized structure for you. You never manually push to an array or splice by index."
 
-- Find the `// CONCEPT: Normalization` comment at line 31 and read it aloud
-- Explain: "This is the same pattern that Redux/NgRx Entity has used for years, but now it is built into SignalStore with zero boilerplate."
+### Part 2: Entity Reads in Computed Signals (5 min)
 
----
+**Editor:** Stay in `inventory.store.ts`, lines 89-140.
 
-### Demo 2: Entity Operations (~8 min)
+1. **Show `filteredProducts` (line 94):** `const products = store.entities();`
+   > "When you need the array form for iteration, filtering, or display, use `entities()`. It reconstructs the array from the ID list and entity map."
 
-**Navigate to:** `src/app/features/inventory/store/inventory.store.ts`
+2. **Show `selectedProduct` (lines 112-115):**
+   ```typescript
+   selectedProduct: computed(() => {
+     const id = store.selectedProductId();
+     return id ? store.entityMap()[id] ?? null : null;
+   }),
+   ```
+   > "When you need a single entity by ID, use `entityMap()`. This is the O(1) lookup. No array scanning."
 
-**Show in editor:**
+3. **Show `stats` (line 129):** `const products = store.entities();`
+   > "Stats like inStock, lowStock, outOfStock all derive from the entity array. The computed only recalculates when the entity collection changes."
 
-- Scroll to lines 211-213: the `setAllEntities()` call inside `loadProducts`. Point out how it replaces ALL entities atomically as part of a `patchState` call at line 215
-- Scroll to lines 241-243: the `addEntity()` CONCEPT comment. Show line 248 where `addEntity(created)` is composed with `patchState`
-- Scroll to lines 266-268: the `updateEntity()` CONCEPT comment. Show line 273 where `updateEntity({ id, changes: updated })` merges partial changes
-- Scroll to lines 288-290: the `removeEntity()` CONCEPT comment. Show line 298 where `removeEntity(id)` removes by ID
+**WOW MOMENT:**
+> "Here is the beautiful part. When you call `updateEntity({ id: 5, changes: { stock: 0 } })`, the entity map updates that ONE entry. The `entities()` signal sees the change and emits a new array reference. Every computed that reads `entities()` -- filteredProducts, stats -- recalculates. But computed signals that do NOT read entities (like `totalPages`) are untouched. Angular's signal graph handles the granularity for you."
 
-**Show in browser:**
+### Part 3: setAllEntities -- Bulk Loading (3 min)
 
-- Navigate to http://localhost:4200/inventory
-- Click "Add Product" button in the toolbar
-- Fill out the form (any title, price, stock) and click "Create"
-- **WOW MOMENT:** The product instantly appears in the table. Point out the snackbar confirmation
-- Find the newly added product, click the edit (pencil) icon
-- Change the price and click "Update". Show the table updates immediately
-- Click the delete (trash) icon on the same product
-- Confirm in the dialog. Show the product disappears from the table
+**Editor:** Scroll to lines 192-230 -- the `loadProducts` rxMethod.
 
-**Key talking point:**
+1. **Show lines 214-218:**
+   ```typescript
+   next: (response) => {
+     patchState(store, setAllEntities(response.products), {
+       total: response.total,
+       loading: false,
+     });
+   },
+   ```
+   > "setAllEntities replaces the ENTIRE entity collection. The old products are gone, the new ones are in. Notice how we combine it with a regular state patch in the same `patchState` call -- entity operations and plain state updates compose together."
 
-> "Notice how each operation is a single function call: `addEntity`, `updateEntity`, `removeEntity`. You never manually spread arrays or filter by ID. The entity adapter handles the normalized storage updates for you."
+**Browser demo:**
+- In the inventory page, watch the table
+- Change the category dropdown to "smartphones"
+- Watch Network tab: a new API call fires
+- The entire table replaces with smartphone products
+- Change back to "All Categories" -- full replacement again
 
-**CONCEPT spotlight:**
+### Part 4: addEntity -- Creating a Product (7 min)
 
-- Find the `// CONCEPT: addEntity()` comment at line 241 and read it aloud
-- Explain: "Each entity operation returns an updater function that `patchState` applies. This is composable. You can combine an entity operation with regular state patches in a single `patchState` call, and they all apply atomically."
+**Editor:** Scroll to lines 244-263 -- the `addProduct` method.
 
----
+1. **Walk through the flow line by line:**
+   - Line 245: Set `loading: true` and clear errors
+   - Line 247: `firstValueFrom(productsApi.add(product))` -- bridge Observable to Promise
+   - Line 248-251: On success, `addEntity(created)` inserts the new product AND increments `total`
+   - Line 254: Push a success notification
+   - Line 255: Coordinate with other stores via `StoreCoordinator`
+   - Lines 257-263: On error, set the error message
 
-### Demo 3: entityMap() O(1) Lookups (~3 min)
+2. **Show the API service.** Open `src/app/features/products/services/products-api.service.ts`, line 37:
+   ```typescript
+   add(product: Partial<Product>): Observable<Product> {
+     return this.api.post<Product>('/products/add', product);
+   }
+   ```
+   > "The API returns the created product with a server-assigned ID. We pass that directly to `addEntity()`."
 
-**Navigate to:** `src/app/features/inventory/store/inventory.store.ts`
+3. **Show the component trigger.** Open `src/app/features/inventory/components/inventory-list.component.ts`, lines 604-622 -- `onAddProduct()`:
+   - Line 605: Opens `InventoryFormComponent` as a dialog
+   - Line 609: Passes `categories` from the store for the dropdown
+   - Line 615: Calls `this.store.addProduct(result)` with the form data
+   - Lines 616-620: Shows a snackbar based on success or failure
 
-**Show in editor:**
+4. **Show the form component.** Open `src/app/features/inventory/components/inventory-form.component.ts`:
+   - Lines 13-16: `InventoryFormData` interface -- `product: Product | null` determines add vs. edit mode
+   - Lines 126-133: Reactive form with validators (`Validators.required`, `Validators.minLength(3)`, `Validators.min(0)`)
+   - Lines 139-142: `onSave()` returns `form.getRawValue()` to the dialog caller
 
-- Open `src/app/features/inventory/store/inventory.store.ts`
-- Highlight lines 109-115: the `selectedProduct` computed signal that uses `store.entityMap()[id]`
-- Point out line 94: `store.entities()` returns the array view (for iteration), while `store.entityMap()` returns the dictionary (for lookups)
+**Browser demo (TESTABLE):**
+1. Click the blue "Add Product" button in the toolbar
+2. Fill in: Title = "Test Widget", Price = 29.99, Stock = 50, pick any category
+3. Click "Create"
+4. Watch for: snackbar "Product added successfully", stats bar updates (Total Products increments by 1)
+5. The new product may appear at the end of the current page or require pagination to find (DummyJSON assigns ID 195+)
 
-**Show in browser:**
+**Recovery:** If the dialog does not open, check the console for errors. If the API call fails, the snackbar will say "Failed to add product" -- check the Network tab for the response.
 
-- Click the "View" (eye) icon on any product row
-- The detail panel opens instantly at the bottom of the page
-- Click a different product. The panel updates immediately
+### Part 5: updateEntity -- Editing a Product (5 min)
 
-**Key talking point:**
+**Editor:** Open `src/app/features/inventory/store/inventory.store.ts`, lines 269-286.
 
-> "Compare `store.entityMap()[id]` with `store.products().find(p => p.id === id)`. The map lookup is constant time regardless of how many products you have. The array find scans every element until it finds a match. For large datasets, this difference is significant."
+1. **Show the key line (273):**
+   ```typescript
+   patchState(store, updateEntity({ id, changes: updated }), {
+     loading: false,
+   });
+   ```
+   > "updateEntity merges `changes` into the existing entity. Only the fields you pass are updated. The rest of the product stays intact. The entity map updates in-place (well, immutably), and `entities()` emits a new array."
 
----
+2. **Show the component trigger.** Open `inventory-list.component.ts`, lines 627-645 -- `onEditProduct()`:
+   - Line 628: Opens the same `InventoryFormComponent`, but passes the existing `product`
+   - Line 638: Calls `this.store.updateProduct(product.id, result)`
 
-### Demo 4: setAllEntities vs addEntity (~5 min)
+3. **Show the form pre-fill.** Open `inventory-form.component.ts`, lines 126-133:
+   ```typescript
+   title: [this.data.product?.title ?? '', [Validators.required, ...]],
+   ```
+   > "When `data.product` is not null, the form pre-fills with existing values. The template also toggles the title: 'Edit Product' vs 'Add Product' (line 36), and the button text: 'Update' vs 'Create' (line 102)."
 
-**Navigate to:** `src/app/features/inventory/store/inventory.store.ts`
+**Browser demo (TESTABLE):**
+1. Find any product row in the table
+2. Click the pencil (edit) icon in the Actions column
+3. Change the title to "MODIFIED - [original title]"
+4. Change the price to 1.00
+5. Click "Update"
+6. Watch: snackbar appears, the table row updates with the new title and price
+7. The stats bar may update if the price change affects averages
 
-**Show in editor:**
+### Part 6: removeEntity -- Deleting a Product (5 min)
 
-- Scroll to lines 214-218: the `patchState(store, setAllEntities(response.products), { total: response.total, loading: false })` call
-- Point out how `setAllEntities` and `{ total, loading }` are composed together in a single `patchState` call
-- Compare with line 248: `patchState(store, addEntity(created), { loading: false, total: store.total() + 1 })` -- same composability pattern
+**Editor:** Open `inventory.store.ts`, lines 291-313.
 
-**Key talking point:**
+1. **Walk through the flow:**
+   - Line 293: Capture the product title BEFORE removal (for activity logging)
+   - Line 298: `removeEntity(id)` removes from entity map and ID array
+   - Line 301: If the deleted product was selected, clear `selectedProductId`
+   - Line 300: Decrement `total` to keep stats accurate
 
-> "This composability is what makes entity operations powerful. `setAllEntities` replaces everything, while `addEntity` appends one item. But both are just updater functions that you pass to `patchState`. You can mix entity operations with regular state patches in one atomic update. The UI only re-renders once."
+2. **Show the confirm dialog.** Open `src/app/shared/ui/confirm-dialog/confirm-dialog.component.ts`:
+   - Lines 8-13: `ConfirmDialogData` interface with title, message, confirmText, cancelText
+   - Line 29: "Confirm" button uses `[mat-dialog-close]="true"` -- returns `true` when clicked
 
-**CONCEPT spotlight:**
+3. **Show the component trigger.** Open `inventory-list.component.ts`, lines 647-667 -- `onDeleteProduct()`:
+   - Line 648: Opens `ConfirmDialogComponent` with a warning message
+   - Line 660: Only calls `store.deleteProduct(product.id)` if `confirmed === true`
 
-- Find the `// CONCEPT: setAllEntities()` comment at line 211 and read it aloud
-- Explain: "Atomic updates matter because Angular's change detection sees one state change, not two. If you did `patchState(store, setAllEntities(...))` and then `patchState(store, { loading: false })` separately, you would trigger two change detection cycles."
+**Browser demo (TESTABLE):**
+1. Find any product row (note the Total Products count in the stats bar)
+2. Click the trash (delete) icon
+3. A confirmation dialog appears: "Are you sure you want to delete [product name]?"
+4. Click "Delete"
+5. Watch: the row disappears from the table, Total Products decrements by 1, snackbar confirms
+6. Click "Cancel" on the next delete attempt to verify the dialog cancellation works
 
----
-
-### Demo 5: CRUD Form Dialog (~5 min)
-
-**Navigate to:** `src/app/features/inventory/components/inventory-form.component.ts`
-
-**Show in editor:**
-
-- Open `src/app/features/inventory/components/inventory-form.component.ts`
-- Highlight lines 10-12: the `InventoryFormData` interface. Point out the `product: Product | null` field that determines add vs edit mode
-- Scroll to lines 119-128: the reactive form with validators. Point out `Validators.required`, `Validators.minLength(3)`, `Validators.min(0)`
-- Show line 31: the template uses `data.product ? 'Edit Product' : 'Add Product'` to switch the dialog title
-
-**Show in browser:**
-
-- Click "Add Product" and try to submit with an empty title. Show the validation error
-- Type "AB" (only 2 chars) and show the min length error
-- Fill in valid data and submit
-
-**Key talking point:**
-
-> "The form dialog follows a clean separation of concerns. The dialog component handles form validation and UI. The parent component (inventory-list) opens the dialog, waits for the result, and delegates the actual API call to the store. The dialog never touches the store directly."
-
-**CONCEPT spotlight:**
-
-- Find the `// CONCEPT: Architecture - Dialog data defines the contract` comment at line 10 and read it aloud
-- Explain: "By passing `product: null` for add mode and `product: existingProduct` for edit mode, we reuse one dialog component for both operations. The form pre-fills itself from the data."
-
----
-
-### Demo 6: Confirm Dialog Pattern (~4 min)
-
-**Navigate to:** `src/app/shared/ui/confirm-dialog/confirm-dialog.component.ts`
-
-**Show in editor:**
-
-- Open `src/app/shared/ui/confirm-dialog/confirm-dialog.component.ts`
-- Highlight lines 5-7: the CONCEPT comment explaining the reusable pattern
-- Show lines 8-13: the `ConfirmDialogData` interface with `title`, `message`, `confirmText`, `cancelText`
-- Show lines 26-30: the template uses `[mat-dialog-close]="false"` and `[mat-dialog-close]="true"` to return boolean results
-
-**Show in editor (second file):**
-
-- Switch to `src/app/features/inventory/components/inventory-list.component.ts`
-- Scroll to lines 613-632: the `onDeleteProduct` method. Show how it opens `ConfirmDialogComponent` with custom data and waits for the boolean result
-
-**Show in browser:**
-
-- Click the delete icon on any product
-- The confirm dialog appears with "Delete Product" title and a warning message
-- Click "Cancel" to dismiss without deleting
-- Click delete again and this time click "Delete" to confirm
-
-**Key talking point:**
-
-> "This is a reusable pattern. The confirm dialog lives in `shared/ui/` and any feature can use it. You configure it through the data contract, not by creating a new dialog for each feature. The same component handles delete confirmations, logout confirmations, or any destructive action."
+**WOW MOMENT:**
+> "Count the lines of code for the entire CRUD cycle. The store methods are about 20 lines each. The component handlers are about 15 lines each. The form is 144 lines total including the template. For a full Create-Read-Update-Delete workflow with validation, confirmation dialogs, error handling, and notification toasts, that is remarkably little code. And the component has zero business logic."
 
 ---
 
 ## Audience Interaction Points
 
-- **Ask the audience:** "Who has written code like `this.products = this.products.filter(p => p.id !== id)` before? How many bugs have you had from forgetting to spread the array?"
-- **Poll/show of hands:** "How many of you have worked with NgRx Entity or similar normalized state libraries before?"
-- **Challenge:** "What would happen if we called `addEntity` with a product that already exists in the collection? Think about it for a moment." (Answer: it would add a duplicate ID to the ids array, which can cause bugs. In practice, the API returns unique IDs.)
+- **After Part 1:** "Why would you pick entity normalization over a simple array? When would a simple array be fine?" (Answer: arrays are fine for small, read-only lists. Entities shine when you have frequent lookups by ID, frequent updates to individual items, or large collections.)
+- **After Part 4:** "What happens to `filteredProducts` when we add a new product?" (Answer: `entities()` emits a new reference, `filteredProducts` recomputes, and if the new product matches the current stock filter, it appears.)
+- **After Part 6:** "What would happen if we forgot to decrement `total` in `deleteProduct`?" (Answer: the stats bar would show the wrong Total Products count, and pagination would be off by one.)
 
 ---
 
 ## Common Questions & Answers
 
-**Q: What happens if two entities have the same ID?**
-A: By default, `withEntities` uses a property called `id` as the entity identifier. If you add an entity with a duplicate ID, the existing one gets overwritten in the entityMap. You can customize the ID field by passing `{ selectId: (entity) => entity.customId }` to `withEntities`.
+**Q: Does withEntities require a numeric `id` field?**
+A: By default, yes -- it looks for a field called `id`. You can customize this with `withEntities({ entity: type<Product>(), collection: 'products', idKey: 'sku' })` if your entity uses a different identifier.
 
 **Q: Can I have multiple entity collections in one store?**
-A: Yes. You can call `withEntities` multiple times with different entity types by using the `collection` option: `withEntities<Product>({ collection: 'products' })` and `withEntities<Category>({ collection: 'categories' })`. Each collection gets its own `ids`, `entityMap`, and `entities` signals, prefixed with the collection name.
+A: Yes. Use the `collection` option: `withEntities({ entity: type<Product>(), collection: 'products' })` and `withEntities({ entity: type<Category>(), collection: 'categories' })`. Each gets its own `productsEntities()`, `categoriesEntities()`, etc.
 
-**Q: Why not just use a regular array with immutable updates?**
-A: You absolutely can for small datasets. The benefits of `withEntities` show up when you have many items and need frequent lookups by ID, or when you want to avoid writing the same array manipulation boilerplate across multiple stores.
+**Q: Is addEntity atomic with patchState?**
+A: Yes. In `patchState(store, addEntity(created), { loading: false, total: store.total() + 1 })`, all updates happen in a single synchronous call. There is no intermediate state where loading is true but the entity is already added.
 
-**Q: Does the DummyJSON API actually persist the changes?**
-A: No. DummyJSON simulates CRUD operations and returns realistic responses, but changes are not saved server-side. If you reload the page, you get the original data back. This is fine for our workshop since we are focused on the client-side state management patterns.
+**Q: Why use firstValueFrom instead of subscribe?**
+A: `firstValueFrom` bridges Observable to Promise, letting us use `async/await`. It automatically unsubscribes after the first emission. For single-shot HTTP calls this is cleaner than manual subscribe/unsubscribe. For streams that emit multiple values, `rxMethod` (Section 06) is the better tool.
+
+**Q: What if the API call fails after the dialog closes?**
+A: The `catch` block in each method sets `loading: false` and `error` on the store. The component checks the return value (`created`, `updated`, `success`) and shows an appropriate snackbar. The entity collection is NOT modified on failure.
+
+---
+
+## Recovery Steps
+
+**If the Add dialog does not open:**
+1. Check console for `NullInjectorError` -- ensure `provideAnimations()` is in `app.config.ts`
+2. Verify `MatDialog` import in `inventory-list.component.ts` (line 16)
+
+**If the API call returns an error:**
+1. DummyJSON may be down -- check https://dummyjson.com/products in a browser tab
+2. The snackbar should show "Failed to add/update/delete product"
+3. Check Network tab for the actual HTTP status code
+
+**If the table does not update after CRUD:**
+1. Verify `addEntity`/`updateEntity`/`removeEntity` is being called (add a `console.log` before the `patchState` call)
+2. Check that the entity ID matches -- DummyJSON returns `id` as a number, not a string
+3. Hard-refresh and try again
 
 ---
 
 ## Transition to Next Section
 
-**Say:** "We now have full CRUD operations with normalized entities, but notice something: our `addProduct`, `updateProduct`, and `deleteProduct` methods all use `async/await` with `firstValueFrom`. This works, but it gives us no control over concurrent requests. What happens if the user clicks 'Add Product' twice quickly? In the next section, we will replace these with `rxMethod` to get cancellation, queueing, and deduplication for free."
-
-**Action:** Navigate to http://localhost:4200/orders and open `src/app/features/orders/store/orders.store.ts` in the editor.
+> "We now have a complete CRUD workflow powered by entity management. But you may have noticed that `loadProducts` uses `rxMethod` and `switchMap`, while `addProduct` uses plain `async/await`. Both work, but they have very different characteristics when it comes to cancellation, queueing, and error recovery. In the next section, we will switch to the Orders feature and explore these async patterns in depth -- including optimistic updates and drag-and-drop."
 
 ---
 
-## Section Cheat Sheet (for quick reference during delivery)
+## Section Cheat Sheet
 
-| Concept | Where to find it | Key line |
-| --- | --- | --- |
-| withEntities import | `inventory.store.ts:3-11` | `import { withEntities, setAllEntities, addEntity, updateEntity, removeEntity }` |
-| Normalization explanation | `inventory.store.ts:31-34` | `// CONCEPT: Normalization` |
-| withEntities composition | `inventory.store.ts:79-83` | `withEntities<Product>()` |
-| entities() array view | `inventory.store.ts:94` | `const products = store.entities()` |
-| entityMap() O(1) lookup | `inventory.store.ts:112-114` | `store.entityMap()[id]` |
-| setAllEntities | `inventory.store.ts:215` | `patchState(store, setAllEntities(response.products), {...})` |
-| addEntity | `inventory.store.ts:248` | `patchState(store, addEntity(created), {...})` |
-| updateEntity | `inventory.store.ts:273` | `patchState(store, updateEntity({ id, changes: updated }), {...})` |
-| removeEntity | `inventory.store.ts:298` | `patchState(store, removeEntity(id), {...})` |
-| Dialog data contract | `inventory-form.component.ts:10-12` | `export interface InventoryFormData` |
-| Reactive form validators | `inventory-form.component.ts:119-128` | `this.fb.nonNullable.group({...})` |
-| Add Product handler | `inventory-list.component.ts:570-587` | `onAddProduct()` |
-| Edit Product handler | `inventory-list.component.ts:593-611` | `onEditProduct(product)` |
-| Delete with confirm | `inventory-list.component.ts:613-632` | `onDeleteProduct(product)` |
-| Confirm dialog component | `confirm-dialog.component.ts:5-7` | `// CONCEPT: Architecture - Reusable confirmation dialog` |
-| API CRUD methods | `products-api.service.ts:34-35` | `// CONCEPT: Architecture - CRUD methods map 1:1 to REST endpoints` |
+| Concept | Location | Line(s) |
+|---|---|---|
+| Entity imports | `inventory.store.ts` | 5-11 |
+| Normalization comment | `inventory.store.ts` | 31-34 |
+| `withEntities<Product>()` | `inventory.store.ts` | 83 |
+| `entities()` read | `inventory.store.ts` | 94, 129 |
+| `entityMap()` lookup | `inventory.store.ts` | 114 |
+| `setAllEntities` (bulk load) | `inventory.store.ts` | 215 |
+| `addEntity` (create) | `inventory.store.ts` | 248 |
+| `updateEntity` (update) | `inventory.store.ts` | 273 |
+| `removeEntity` (delete) | `inventory.store.ts` | 298 |
+| Total adjustment on add | `inventory.store.ts` | 250 |
+| Total adjustment on delete | `inventory.store.ts` | 300 |
+| Selection cleanup on delete | `inventory.store.ts` | 301 |
+| InventoryFormData interface | `inventory-form.component.ts` | 13-16 |
+| Reactive form with validators | `inventory-form.component.ts` | 126-133 |
+| Add dialog trigger | `inventory-list.component.ts` | 604-622 |
+| Edit dialog trigger | `inventory-list.component.ts` | 627-645 |
+| Delete with confirmation | `inventory-list.component.ts` | 647-667 |
+| ConfirmDialogData interface | `confirm-dialog.component.ts` | 8-13 |
+| ProductsApiService CRUD | `products-api.service.ts` | 37-47 |

@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
+import { MatButton } from '@angular/material/button';
+import { MatIcon } from '@angular/material/icon';
 
 // CONCEPT: Anti-pattern - Event bubbling. Chaining @Output() through 3+ levels.
 // This creates fragile chains where any intermediate component must forward events.
@@ -9,7 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 @Component({
   selector: 'app-product-actions-bad',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule],
+  imports: [MatButton, MatIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="actions">

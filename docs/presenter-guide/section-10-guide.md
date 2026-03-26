@@ -1,348 +1,248 @@
 # Section 10: Migration, Anti-Patterns & Decision Making
 
-## Duration: ~30 minutes
+**Duration:** ~30 minutes
+**URL:** N/A (conceptual section, no dedicated route)
+**Goal:** Teach the audience how to migrate BehaviorSubject services to SignalStore, recognize the eight most common anti-patterns, and use a decision tree to pick the right state management approach for any given scenario.
+
+**Important:** This section is conceptual. The legacy/ folder does not exist in this project. Code examples come from the section spec at `docs/sections/section-10-migration-patterns.md`. The presenter walks through those snippets and contrasts them with the real SignalStore implementations built in previous sections.
 
 ---
 
 ## Pre-Section Checklist
 
-- [ ] App is running (`ng serve`)
-- [ ] Browser open at http://localhost:4200
-- [ ] VS Code open with the project
-- [ ] All previous sections completed (attendees should be familiar with InventoryStore, OrdersStore, AuthStore, ThemeStore, and the coordinator pattern)
+- [ ] `ng serve` running at http://localhost:4200/
+- [ ] Editor open with the spec document: `docs/sections/section-10-migration-patterns.md`
+- [ ] Editor tabs ready for the "good pattern" files:
+  - `src/app/features/inventory/store/inventory.store.ts`
+  - `src/app/features/orders/store/orders.store.ts`
+  - `src/app/features/order-builder/store/order-builder.store.ts`
+  - `src/app/core/auth/auth.store.ts`
+  - `src/app/shared/store-features/with-loading.ts`
+  - `src/app/features/dashboard/store/dashboard.store.ts`
+  - `src/app/core/coordination/store-coordinator.service.ts`
+- [ ] Browser on the Dashboard (http://localhost:4200/dashboard) to use as a visual reference of the finished architecture
+- [ ] Whiteboard or screen-share drawing tool ready for the decision tree
 
 ---
 
 ## Opening (2 min)
 
-**Say:** "You now know how to build signal-based stores, coordinate them, and compose custom features. But most of you are not starting from scratch. You have existing apps with BehaviorSubjects, manual subscriptions, and patterns you have used for years. This section is about bridging that gap: how to migrate incrementally, what mistakes to avoid, and how to decide which pattern fits each situation."
+Stay on the Dashboard or switch to the editor showing the full project tree.
 
-**Context bridge:** Sections 1 through 9 focused on building new code with SignalStore. This section flips the perspective: how do you adopt these patterns in an existing codebase? We will cover a BehaviorSubject-to-SignalStore migration, walk through eight common anti-patterns, and use a decision tree to choose the right state approach.
-
-**Note to presenter:** The legacy demo files (`src/app/features/legacy/`) are planned but may not yet be implemented in the codebase. If those files are not available, use the existing project stores as "after" examples and describe the "before" pattern verbally or on a whiteboard. The concepts are the same either way.
+> "Over the last eight sections, we built a full state management architecture from scratch: signals, SignalStore, entities, async methods, custom features, global state, and cross-store coordination. Now the question every team faces: how do you get here from where you are today? Most Angular apps have BehaviorSubject services, some have classic NgRx, and many have a mix of both. This section gives you a concrete migration playbook, a gallery of mistakes to avoid, and a decision tree for choosing the right approach."
 
 ---
 
 ## Demo Flow
 
-### Demo 1: BehaviorSubject vs SignalStore (~8 min)
+### Demo 1: BehaviorSubject to SignalStore Migration (10 min)
 
-This demo shows a side-by-side comparison of the old approach (BehaviorSubject-based service) versus the modern approach (SignalStore).
+**Editor - show the "before" code from the spec:**
 
-**If `src/app/features/legacy/product-legacy.service.ts` exists, open it.** Otherwise, describe the BehaviorSubject pattern verbally:
+1. Open `docs/sections/section-10-migration-patterns.md`
+   - Scroll to the `ProductLegacyService` code block (spec lines 25-98).
+   - Walk through the pain points:
+     - **Spec lines 31-33**: Three separate `BehaviorSubject` instances for products, loading, and error. Each one needs its own `.asObservable()` exposure.
+     - **Spec lines 37-39**: Exposing as Observables with `this.productsSubject.asObservable()`. This is boilerplate.
+     - **Spec lines 42-47**: `combineLatest` for derived state (`selectedProduct$`). Manually combining two subjects and piping through `map`.
+     - **Spec lines 56-72**: `loadProducts()` sets loading, subscribes to HTTP, calls `.next()` in both success and error callbacks, and needs `takeUntilDestroyed` for cleanup.
+     - **Spec line 96**: Deleting a product requires `this.productsSubject.next(this.productsSubject.value.filter(...))`. Manual array manipulation with imperative `.next()`.
 
-A traditional BehaviorSubject-based service looks like this:
-- A private `BehaviorSubject<Theme>` with an initial value
-- A public `theme$` observable exposed via `.asObservable()`
-- Manual subscription management in every consuming component
-- Manual `localStorage.getItem()` and `setItem()` calls scattered through methods
-- `ngOnDestroy` with `subscription.unsubscribe()` in every component that subscribes
+> "Count the moving parts: four BehaviorSubjects, three Observable exposures, one combineLatest, manual takeUntilDestroyed, and imperative .next() calls everywhere. This is 98 lines for basic CRUD state."
 
-**Now show the real "after" example:**
+**Editor - show the "after" code from the spec, then the real project files:**
 
-**Open:** `src/app/core/theme/theme.store.ts`
+2. Scroll to `ProductMigratedStore` in the spec (spec lines 106-170).
+   - **Spec lines 107-112**: `withState` replaces all four BehaviorSubjects with a single state declaration.
+   - **Spec lines 114-120**: `withComputed` replaces `combineLatest` + `map` with a `computed()` for `selectedProduct` and `productCount`.
+   - **Spec lines 127-139**: `rxMethod<void>` replaces manual HTTP subscription with `tapResponse`. No `takeUntilDestroyed` needed.
+   - **Spec lines 158-162**: `deleteProduct` uses `patchState` with a filter. No `.next()`, no `.value` access.
 
-- **Lines 5-7** - CONCEPT: previously this was an @Injectable class with raw signals. Now it is a SignalStore that composes withLocalStorage() for automatic theme persistence. Zero manual localStorage code in this file.
-- **Lines 9-18** - The entire store: state, localStorage integration, computed signals, methods, and lifecycle hooks. All in one composable declaration.
-- **Line 19** - `withLocalStorage('stockpilot-theme', ['theme'])` replaces all manual localStorage read/write logic. One line. Write once, reuse everywhere.
-- **Lines 21-37** - Computed signals `isDark` and `icon`. In BehaviorSubject world, these would be separate observables with `pipe(map(...))` and a risk of multiple subscriptions causing duplicate work.
-- **Lines 40-54** - Methods use `patchState()`. No `this.themeSubject.next()`, no spread operator boilerplate.
-- **Lines 59-66** - The effect() in onInit syncs the body class. In BehaviorSubject world, this would be a subscription you must remember to unsubscribe.
+3. Now show a real example from the project. Open `src/app/features/inventory/store/inventory.store.ts`
+   - Point out that this is the production version of the same pattern: `withEntities`, `withComputed`, `withMethods` using `rxMethod`, and `withHooks`.
+   - This file is the "after" that the migration produces.
 
-**Say:** "Count what disappeared: no BehaviorSubject, no asObservable(), no subscribe(), no unsubscribe(), no manual localStorage calls, no pipe(map(...)). The signal-based version is shorter, safer, and composes better."
+4. Show the migration cheat sheet (from spec lines 201-208). Read through the mapping table:
 
-**Migration mapping table** (draw on screen or present as a slide):
+   | BehaviorSubject Pattern | SignalStore Equivalent |
+   |---|---|
+   | `new BehaviorSubject(value)` | `withState({ key: value })` |
+   | `.asObservable()` | `store.key()` (auto-exposed as signal) |
+   | `.pipe(map(...))` / `combineLatest` | `withComputed(() => computed(...))` |
+   | `.next(value)` | `patchState(store, { key: value })` |
+   | `.subscribe()` + `takeUntilDestroyed` | `rxMethod(pipe(...))` |
+   | Manual loading/error flags | `withLoading()` custom feature |
 
-| BehaviorSubject Pattern | SignalStore Equivalent |
-|---|---|
-| `private subject = new BehaviorSubject(init)` | `withState({ ... })` |
-| `subject.asObservable()` | `store.mySignal()` (direct signal read) |
-| `subject.pipe(map(...))` | `withComputed(() => computed(...))` |
-| `subject.next(value)` | `patchState(store, { ... })` |
-| `combineLatest([a$, b$]).pipe(map(...))` | `computed(() => f(a(), b()))` |
-| `subscribe()` + `unsubscribe()` | Template reads signal directly, no cleanup |
-| Manual localStorage read/write | `withLocalStorage(key, fields)` |
-| `ngOnDestroy` cleanup | Not needed for root stores; automatic for scoped stores |
+5. Open `src/app/shared/store-features/with-loading.ts` as the real example of that last row.
+   - **Lines 7-36**: The entire `withLoading()` feature is 36 lines. It provides `loading`, `error`, `hasError`, `setLoading`, `setLoaded`, `setError`, and `clearError`. Any store composes it with a single function call.
 
----
+> **Wow moment:** "The migration strategy is not 'rewrite everything on a weekend.' It is: pick one BehaviorSubject service, create a parallel SignalStore with the same API, update the components, delete the old service. Feature by feature, at your own pace."
 
-### Demo 2: Migration Cheat Sheet (~5 min)
+### Demo 2: Anti-Patterns Gallery (10 min)
 
-Walk through the incremental migration strategy. The key principle is: you do not have to migrate everything at once. BehaviorSubject services and SignalStores can coexist.
+Walk through the eight anti-patterns from the spec (spec lines 219-275). For each one, show the bad code from the spec and then point to the real project file that demonstrates the correct approach.
 
-**Step 1: Wrap existing observables with toSignal()**
+**Anti-pattern 1: "effect() for state derivation"**
 
-Say: "If you have a BehaviorSubject service that works, do not rewrite it immediately. Wrap its observables with `toSignal()` in the consuming component. This gives you signal-based reads without changing the service."
+- Bad (spec lines 222-224): Using `effect()` to set a signal based on other signals.
+- Good: Use `computed()`. Show `src/app/core/activity-log/activity-log.store.ts` lines 16-30 as a real example of computed signals deriving state.
+- Explain: `effect()` creates an unnecessary write cycle. `computed()` is synchronous and glitch-free.
 
-**Step 2: Convert simple services first**
+**Anti-pattern 2: "Everything in global state"**
 
-**Open:** `src/app/core/theme/theme.store.ts`
+- Bad (spec lines 231-232): Storing form validation state in a global store.
+- Good: Keep UI state in the component. Show `src/app/features/inventory/components/inventory-form.component.ts` as an example where form state stays local to the component while inventory data lives in the store.
 
-Say: "ThemeStore is the perfect first migration candidate. It has simple state (one field), one computed, two methods. No async. No entity management. Start with stores like this."
+**Anti-pattern 3: "Subscribing to set signals"**
 
-**Step 3: Migrate services with HTTP calls**
+- Bad (spec lines 238-239): `this.service.data$.subscribe(data => this.data.set(data))`.
+- Good: Use `toSignal()`. The project uses `rxMethod` instead of manual subscriptions throughout. Show `src/app/features/orders/store/orders.store.ts` as an example of `rxMethod` handling the Observable-to-state bridge cleanly.
 
-**Open:** `src/app/core/auth/auth.store.ts`
+**Anti-pattern 4: "Mutating signal values"**
 
-- **Lines 56-92** - Show the login rxMethod. Say: "BehaviorSubject services with HTTP calls typically have `subscribe()` inside methods. Replace those with `rxMethod()` and `tapResponse()`. The HTTP logic stays the same; only the wrapper changes."
-- **Lines 178-188** - Show the effect() for token persistence. Say: "This replaces a pattern where you manually call `localStorage.setItem()` after every method that changes the token."
+- Bad (spec lines 246-247): `this.items().push(newItem)` mutates the array in place.
+- Good: Use immutable updates. Show `src/app/core/activity-log/activity-log.store.ts` line 43-44: `patchState(store, (s) => ({ entries: [fullEntry, ...s.entries].slice(0, s.maxEntries) }))`. Always create a new array.
 
-**Step 4: Add entity management last**
+**Anti-pattern 5: "Calling APIs from components"**
 
-**Open:** `src/app/features/inventory/store/inventory.store.ts`
+- Bad (spec lines 253-254): Component injects `HttpClient` directly.
+- Good: Component calls store, store calls API. Show `src/app/features/dashboard/dashboard.component.ts` line 348: the component injects only `DashboardStore`, never `HttpClient` or `ApiService`.
 
-- **Lines 79-83** - `withEntities<Product>()`. Say: "Entity management is the most advanced step. Migrate to it only after your basic state and methods are working with SignalStore. The addEntity/updateEntity/removeEntity operations replace manual array manipulation."
+**Anti-pattern 6: "Storing derived data in state"**
 
-**Say:** "The golden rule of migration: one service at a time, starting with the simplest. Run both patterns side by side. Do not try a big-bang rewrite."
+- Bad (spec lines 260-261): `patchState(store, { filteredProducts: products.filter(...) })`.
+- Good: Use `computed()`. Show `src/app/features/dashboard/store/dashboard.store.ts` lines 48-53: `lowStockProducts` is a computed signal that filters inventory entities. It is never stored in state.
 
----
+**Anti-pattern 7: "One mega store"**
 
-### Demo 3: Anti-Patterns Gallery (~10 min)
+- Bad (spec lines 267-268): A single `AppStore` with auth, products, orders, theme, and notifications all in one place.
+- Good: Separate stores per feature, coordinate via mediator. Show `src/app/core/coordination/store-coordinator.service.ts` lines 14-19 as the coordination point between five independent stores.
 
-Walk through eight common mistakes. For each one, show the wrong way and the right way using real code from the project.
+**Anti-pattern 8: "Nested objects in entity state"**
 
-**Anti-Pattern 1: Using effect() for derived state**
+- Bad (spec lines 272-273): Orders containing deeply nested product arrays.
+- Good: Normalize with separate entity collections. Show `src/app/features/order-builder/store/order-builder.store.ts` which uses `withEntities` for a flat entity collection rather than deeply nesting related data.
 
-Wrong: Using `effect()` to watch a signal and write to another signal.
-```typescript
-// BAD: effect() to derive filtered products
-effect(() => {
-  this.filteredProducts.set(
-    this.products().filter(p => p.stock > 0)
-  );
-});
+> **Wow moment:** "Every one of these anti-patterns was someone's reasonable first attempt. The difference between a 'works but fragile' app and a 'works and scales' app is recognizing these patterns early."
+
+### Demo 3: The Decision Tree (8 min)
+
+Draw or display the decision tree from the spec (spec lines 282-294). Walk through each branch with real examples from the project:
+
+```
+"Is state used by only 1 component?"
+  YES -> signal() in the component
+  NO -> "Is it shared within a single feature?"
+    YES -> "Is the logic simple (< 3 signals, no async)?"
+      YES -> Signal service (injectable)
+      NO -> SignalStore scoped to feature route
+    NO -> "Is it app-wide?"
+      YES -> Global SignalStore (providedIn: 'root')
+      NO -> "Does it come from an API?"
+        YES -> "Simple GET with no mutations?"
+          YES -> resource() in component
+          NO -> SignalStore with rxMethod + withEntities
+        NO -> Pass via Input/Output
 ```
 
-Right: Use `computed()`.
-
-**Open:** `src/app/features/inventory/store/inventory.store.ts`
-
-- **Lines 89-107** - `filteredProducts` is a computed signal. It automatically recalculates when `entities()` or `filters()` change. No effect needed. No timing issues. No extra signal writes.
-- **Lines 128-139** - `stats` is another computed. It aggregates entity data. Using effect() here would create an unnecessary write cycle: read entities, write stats, trigger change detection again.
-
-**Say:** "If your effect() reads signal A and writes to signal B, replace it with a computed. Computed signals are synchronous, glitch-free, and lazy. Effects are for side effects: DOM manipulation, localStorage, logging, HTTP calls."
-
----
-
-**Anti-Pattern 2: Forgetting untracked() in effects**
-
-Wrong: Reading signals inside an effect that should not trigger re-runs.
-
-**Open:** `src/app/core/coordination/store-coordinator.service.ts`
-
-- **Lines 30-32** - CONCEPT: untracked(). Without it, reading signals inside `onLogin()` would register them as dependencies, causing the effect to re-run when inventory or orders data changes. That would trigger `onLogin()` again, creating an infinite loop.
-
-**Say:** "When your effect needs to call methods that read other signals, wrap those calls in untracked(). Otherwise, every signal touched inside the effect becomes a trigger."
-
----
-
-**Anti-Pattern 3: Mutating state directly**
-
-Wrong: `store.filters().search = 'laptop'` or `store.entities().push(newProduct)`.
-
-Right: Always use patchState().
-
-**Open:** `src/app/features/inventory/store/inventory.store.ts`
-
-- **Lines 156-161** - `setFilters()` uses `patchState()` with the function form. It spreads the existing filters and merges the partial update. The state is replaced immutably.
-
-**Say:** "Signals hold references. If you mutate the object inside a signal, change detection will not see the change because the reference did not change. Always create new objects via patchState()."
-
----
-
-**Anti-Pattern 4: Over-globalizing state**
-
-Wrong: Making every store `providedIn: 'root'` even when only one route uses it.
-
-Right: Use route-level providers for feature-scoped state.
-
-**Say:** "In StockPilot, AuthStore and ThemeStore are root-scoped because they are needed everywhere. InventoryStore is also root-scoped because the dashboard aggregates its data. But if you had a store only used by one lazy-loaded route, provide it at the route level so it is created and destroyed with the route."
-
----
-
-**Anti-Pattern 5: Calling APIs directly from components**
-
-Wrong: Injecting HttpClient in a component and making API calls.
-
-**Open:** `src/app/features/home/product-list-bad.component.ts`
-
-- **Lines 10-12** - CONCEPT: fetching data directly in a component via HttpClient. No service, no store, no caching. Every mount triggers a new HTTP call.
-- **Lines 66-68** - `HttpClient` injected directly into the component.
-- **Lines 87-101** - The `fetchProducts()` method. Raw HTTP call, manual loading state, manual error handling. All inside a component.
-
-Now show the correct approach:
-
-**Open:** `src/app/features/inventory/components/inventory-list.component.ts`
-
-- **Lines 18** - The component injects only `InventoryStore`. No HttpClient, no API service.
-- **Lines 43-45** - CONCEPT: the entire template reads signals from the store. No business logic lives in the component. It is purely presentational.
-
-**Say:** "Components should be thin. They read signals, call store methods, and render templates. All data fetching, caching, error handling, and business logic lives in the store or a service."
-
----
-
-**Anti-Pattern 6: Not handling loading and error states**
-
-Wrong: Calling an API and only handling the success case.
-
-Right: Track loading, error, and data as separate state fields.
-
-**Open:** `src/app/core/auth/auth.store.ts`
-
-- **Lines 16-22** - AuthState includes `status` (idle, loading, authenticated, error) and `errorMessage`. Every state transition is explicit.
-- **Lines 58-59** - Before the HTTP call: `patchState(store, { status: 'loading', errorMessage: null })`.
-- **Lines 82-86** - On error: `patchState(store, { status: 'error', errorMessage: ... })`.
-
-**Say:** "Every async operation needs three states: loading, success, error. If you skip loading, users see stale data. If you skip error, failures are silent. Make them explicit in your state shape."
-
----
-
-**Anti-Pattern 7: One mega store for the entire app**
-
-Wrong: A single `AppStore` with products, orders, auth, theme, notifications, and activity log all in one withState().
-
-Right: Separate stores per domain with a coordinator for cross-cutting concerns.
-
-**Say:** "StockPilot has six stores: AuthStore, ThemeStore, NotificationsStore, ActivityLogStore, InventoryStore, and OrdersStore. Plus a DashboardStore that aggregates. Each one owns exactly one domain. The StoreCoordinator handles cross-cutting workflows. If any store grows too large, you split it further."
-
-Show the project structure:
-
-- `src/app/core/auth/auth.store.ts` - Authentication
-- `src/app/core/theme/theme.store.ts` - Theme preference
-- `src/app/core/notifications/notifications.store.ts` - Notifications
-- `src/app/core/activity-log/activity-log.store.ts` - Activity logging
-- `src/app/features/inventory/store/inventory.store.ts` - Inventory management
-- `src/app/features/orders/store/orders.store.ts` - Order management
-- `src/app/features/dashboard/store/dashboard.store.ts` - Dashboard aggregation
-- `src/app/core/coordination/store-coordinator.service.ts` - Cross-store orchestration
-
-**Say:** "Eight files, each under 200 lines. Compare that to a single 1500-line AppStore. Which one would you rather debug at 2 AM?"
-
----
-
-**Anti-Pattern 8: Circular store dependencies**
-
-Wrong: InventoryStore injects OrdersStore which injects InventoryStore.
-
-Right: Use the mediator pattern or lazy injection.
-
-**Open:** `src/app/features/inventory/store/inventory.store.ts`
-
-- **Lines 145-149** - InventoryStore uses `inject(Injector)` and resolves StoreCoordinator lazily via `injector.get(StoreCoordinator)` at call time. This breaks the circular chain.
-
-**Open:** `src/app/core/coordination/store-coordinator.service.ts`
-
-- **Lines 9-12** - The mediator pattern. Stores never import each other for workflow purposes. The coordinator is the only service that knows about all stores.
-
-**Say:** "Two rules: stores should not import each other, and when a store needs to trigger a cross-cutting workflow, it calls the coordinator. If a store must reference the coordinator, use lazy injection via Injector."
-
----
-
-### Demo 4: Decision Tree (~5 min)
-
-Present the decision flowchart for choosing the right state approach. Walk through it with the audience.
-
-**Decision tree:**
-
-1. **Is the state used by only one component?**
-   - Yes: Use a local `signal()` in the component. Example: `isMobile` in `src/app/core/layout/shell.component.ts` line 227.
-   - No: Continue.
-
-2. **Is it shared between a parent and its direct children?**
-   - Yes: Use `@Input()` and `@Output()`. Keep it simple.
-   - No: Continue.
-
-3. **Is it shared across sibling components or unrelated routes?**
-   - Yes: Use a SignalStore. Continue to step 4.
-   - No: Re-evaluate. It might still be local state.
-
-4. **Is it needed by the entire app (auth, theme, notifications)?**
-   - Yes: Use `providedIn: 'root'`. Examples: AuthStore, ThemeStore, NotificationsStore.
-   - No: Provide it at the route level for feature-scoped state.
-
-5. **Does it manage a collection of entities?**
-   - Yes: Use `withEntities()`. Example: InventoryStore.
-   - No: Use plain `withState()`. Example: ThemeStore.
-
-6. **Does it involve HTTP calls?**
-   - Yes: Use `rxMethod()` with `tapResponse()`. Example: AuthStore login.
-   - No: Use synchronous `patchState()`. Example: ThemeStore toggleTheme.
-
-7. **Do multiple stores need to react to the same event?**
-   - Yes: Use a StoreCoordinator (mediator pattern). Example: login triggers inventory + orders + notifications + activity log.
-   - No: Keep the logic in the individual store.
-
-**Say:** "Print this tree and tape it to your monitor for the first month. After that, it becomes second nature."
-
----
-
-### Demo 5: Architecture Recap (~2 min)
-
-Pull up the full project structure and connect the dots from all ten sections.
-
-**Say:** "Let us trace a single user journey through the entire architecture."
-
-1. User opens the app. **ShellComponent** (`src/app/core/layout/shell.component.ts`) injects ThemeStore, AuthStore, NotificationsStore, and StoreCoordinator (eager initialization, lines 218-222).
-2. User clicks Login. **AuthStore** (`src/app/core/auth/auth.store.ts`) fires `login()` rxMethod with exhaustMap (line 56).
-3. Login succeeds. AuthStore patches state to `authenticated` (line 75). The **StoreCoordinator** (`src/app/core/coordination/store-coordinator.service.ts`) effect detects the change (lines 26-38) and calls `onLogin()`.
-4. `onLogin()` loads inventory, loads orders, shows a notification, and logs the event (lines 46-53).
-5. User navigates to Dashboard. **DashboardStore** (`src/app/features/dashboard/store/dashboard.store.ts`) aggregates data from all four stores via computed signals (lines 45-78).
-6. User adds a product in Inventory. **InventoryStore** (`src/app/features/inventory/store/inventory.store.ts`) calls `addEntity()` (line 248) and notifies the coordinator (line 255). The dashboard's computed signals update automatically.
-7. User returns to Dashboard. The numbers are already updated. No refresh needed.
-
-**Say:** "Signals, stores, computed aggregation, mediator coordination. That is the full picture. You have all the tools you need."
+Map each leaf to a real file in the project:
+
+| Decision | Example from this project |
+|---|---|
+| signal() in component | Form fields in `src/app/features/inventory/components/inventory-form.component.ts` |
+| SignalStore scoped to feature | `src/app/features/order-builder/store/order-builder.store.ts` |
+| Global SignalStore | `src/app/core/auth/auth.store.ts` (providedIn: 'root') |
+| SignalStore with rxMethod + withEntities | `src/app/features/inventory/store/inventory.store.ts` |
+| Aggregation store | `src/app/features/dashboard/store/dashboard.store.ts` |
+| Mediator for cross-store | `src/app/core/coordination/store-coordinator.service.ts` |
+
+> "The default should always be the simplest option. Start with a signal in the component. Promote to a store only when you need sharing, persistence, or complex async. Do not reach for a global store until the data truly is global."
+
+Walk through the "Why migrate?" and "When NOT to migrate" concepts from the spec (spec lines 360-371):
+
+- **Why migrate:** Signals are synchronous (no timing bugs), glitch-free (no intermediate invalid states), auto-tracked, and leak-proof.
+- **When NOT to migrate:** Keep RxJS for WebSocket streams, complex async coordination with retry/backoff, and libraries that require Observables. Do not migrate for the sake of migrating.
 
 ---
 
 ## Audience Interaction Points
 
-1. **After Demo 1 (BehaviorSubject vs SignalStore):** "How many BehaviorSubject services do you have in your current project? Which one would be the easiest to migrate first?"
-2. **After Demo 3 (Anti-Patterns):** "Which of these eight anti-patterns have you seen in your own codebase? Which one surprised you the most?"
-3. **After Demo 4 (Decision Tree):** "Think about a feature you are building right now. Walk through the decision tree. Where does it land?"
-4. **Final question:** "What is the first thing you will change in your codebase when you get back to work?"
+| When | What to Ask |
+|------|-------------|
+| After the migration mapping table | "Who has a BehaviorSubject service in their current project? Can you estimate how many subjects it has?" |
+| After Anti-pattern 1 | "Has anyone used effect() to sync derived state? What happened when the dependency graph got complicated?" |
+| After Anti-pattern 7 | "What is the largest single store or service you have worked with? How many responsibilities did it have?" |
+| After the decision tree | "Pick one piece of state from your current project. Walk through the decision tree. Where does it land?" |
+| Closing | "What is the first thing you will change in your codebase on Monday?" |
 
 ---
 
 ## Common Questions & Answers
 
-**Q: "Do I have to migrate all my BehaviorSubject services at once?"**
-A: No. Migrate incrementally, one service at a time. BehaviorSubjects and SignalStores coexist happily. Use `toSignal()` to bridge existing observables into the signal world. Start with the simplest service and work up to complex ones.
-
-**Q: "Is SignalStore stable enough for production?"**
-A: Yes. SignalStore is part of the official @ngrx/signals package and has been stable since NgRx 17. It is actively maintained and used in production by many teams.
-
-**Q: "What about server-side rendering (SSR)?"**
-A: SignalStore works with SSR. Signals are synchronous, so there are no subscription timing issues. Be careful with `effect()` that touches browser APIs (localStorage, window) as those are unavailable on the server. Use `afterNextRender()` or `isPlatformBrowser()` guards.
-
-**Q: "How do I test a SignalStore?"**
-A: Inject the store in a test using `TestBed`. Call its methods and assert on its signals. For stores with rxMethod, use the `provideMockActions()` pattern or test the store in integration with a mock API service. Computed signals can be tested by setting up the initial state and asserting the derived values.
-
-**Q: "Should I use NgRx Store (Redux-style) or SignalStore?"**
-A: If your team already uses NgRx Store and has established patterns, keep using it. For new projects or teams that find Redux boilerplate excessive, SignalStore is lighter and more Angular-native. Both are maintained by the NgRx team. Choose based on team preference and existing investment.
+| Question | Answer |
+|----------|--------|
+| "Can I use SignalStore and BehaviorSubject services side by side during migration?" | Yes. That is the recommended approach. Create the SignalStore in parallel, migrate components one at a time, and delete the old service when nothing references it. The two can coexist indefinitely. |
+| "What about classic NgRx Store (actions/reducers/effects)?" | The migration path is similar. Replace reducers with `withState` + `patchState`, replace selectors with `withComputed`, replace effects with `rxMethod`, and replace actions with direct method calls. The NgRx team considers SignalStore the future direction. |
+| "Is computed() really glitch-free? What if I read two signals that update at different times?" | Computed signals use a push/pull algorithm. When a dependency changes, the computed is marked dirty but not recalculated until something reads it. By the time the template reads it, all upstream signals have settled. There are no intermediate states. |
+| "When would I still use full NgRx Store instead of SignalStore?" | For apps that need action replay (time-travel debugging), strict action logging for audit trails, or complex undo/redo based on action history. For most apps, SignalStore covers the use cases with less ceremony. |
+| "How do I handle optimistic updates during migration?" | The same way as in SignalStore: update state first, send the HTTP request, and roll back on error. The `tapResponse` operator in `rxMethod` makes the error path explicit. |
+| "Should I migrate all at once or feature by feature?" | Feature by feature, always. Pick the simplest service first to build confidence, then tackle the complex ones. Never attempt a "big bang" rewrite. |
 
 ---
 
-## Transition / Workshop Closing
+## Workshop Closing (5 min)
 
-**Say:** "That is the complete StockPilot workshop. You have gone from understanding why state management matters, through Angular signals, SignalStore basics, entity management, async patterns, custom features, global state, store architecture at scale, and now migration strategies. The code is all in the repo. Clone it, experiment with it, break it, rebuild it. The best way to learn these patterns is to apply them to your own projects. Start small, migrate one service, and build from there."
+> "Let's recap what we built over these ten sections."
+
+Walk through the architecture by opening each key file:
+
+1. **The problem** (Section 01): Prop drilling, event bubbling, duplicate HTTP calls.
+2. **Signals foundation** (Section 02): `signal()`, `computed()`, `effect()`.
+3. **Component state** (Section 03): Signals in components for local UI state.
+4. **SignalStore core** (Section 04): `withState`, `withComputed`, `withMethods`, `patchState`.
+5. **Entities and CRUD** (Section 05): `withEntities` for normalized collections -- `src/app/features/inventory/store/inventory.store.ts`.
+6. **Async side effects** (Section 06): `rxMethod` with `tapResponse` -- `src/app/features/orders/store/orders.store.ts`.
+7. **Custom features** (Section 07): `signalStoreFeature()` for reuse -- `src/app/shared/store-features/with-loading.ts`.
+8. **Global state** (Section 08): `providedIn: 'root'` for auth and notifications -- `src/app/core/auth/auth.store.ts`.
+9. **Store architecture** (Section 09): Mediator, event-driven log, aggregation store -- `src/app/core/coordination/store-coordinator.service.ts` and `src/app/features/dashboard/store/dashboard.store.ts`.
+10. **Migration and decisions** (Section 10): Migration playbook, anti-patterns, decision tree.
+
+> "The architecture we built is not theoretical. It runs right here at localhost:4200. Every pattern we discussed has a working implementation you can reference. Take the decision tree back to your team, pick one BehaviorSubject service, and start migrating. That is the best next step."
 
 ---
 
 ## Section Cheat Sheet
 
-| Topic | Where to See It | File | Lines |
-|---|---|---|---|
-| Signal-based store (simple) | ThemeStore "after" example | `src/app/core/theme/theme.store.ts` | 5-7, 19 |
-| withLocalStorage composition | Replaces manual localStorage | `src/app/core/theme/theme.store.ts` | 19 |
-| rxMethod migration | HTTP calls in stores | `src/app/core/auth/auth.store.ts` | 56-92 |
-| effect() for persistence | Token saved to sessionStorage | `src/app/core/auth/auth.store.ts` | 178-188 |
-| withEntities (advanced) | Normalized product collection | `src/app/features/inventory/store/inventory.store.ts` | 79-83 |
-| Anti-pattern: effect for derivation | Correct: computed signals | `src/app/features/inventory/store/inventory.store.ts` | 89-107, 128-139 |
-| Anti-pattern: untracked missing | Correct: untracked in coordinator | `src/app/core/coordination/store-coordinator.service.ts` | 30-32 |
-| Anti-pattern: API in component | Bad example | `src/app/features/home/product-list-bad.component.ts` | 10-12, 66-68 |
-| Anti-pattern: API in component | Good example | `src/app/features/inventory/components/inventory-list.component.ts` | 18 |
-| Anti-pattern: no error states | Correct: explicit status field | `src/app/core/auth/auth.store.ts` | 16-22 |
-| Anti-pattern: mega store | Correct: separate stores per domain | Project-wide (6 stores + 1 aggregation + 1 coordinator) | - |
-| Anti-pattern: circular deps | Correct: lazy Injector resolution | `src/app/features/inventory/store/inventory.store.ts` | 145-149 |
-| Eager initialization | Coordinator in shell | `src/app/core/layout/shell.component.ts` | 218-222 |
-| Local signal (decision tree) | isMobile in ShellComponent | `src/app/core/layout/shell.component.ts` | 227 |
+| Concept | Reference | What to Show |
+|---------|-----------|--------------|
+| BehaviorSubject legacy pattern | `docs/sections/section-10-migration-patterns.md` lines 25-98 | ProductLegacyService code block |
+| SignalStore migrated equivalent | `docs/sections/section-10-migration-patterns.md` lines 106-170 | ProductMigratedStore code block |
+| Migration mapping table | `docs/sections/section-10-migration-patterns.md` lines 201-208 | BehaviorSubject to SignalStore row-by-row |
+| Real inventory store (migration "after") | `src/app/features/inventory/store/inventory.store.ts` | Full SignalStore with entities and rxMethod |
+| Real orders store (rxMethod patterns) | `src/app/features/orders/store/orders.store.ts` | rxMethod with tapResponse |
+| Real order builder (composed features) | `src/app/features/order-builder/store/order-builder.store.ts` | withEntities for flat entity collections |
+| Real auth store (global state) | `src/app/core/auth/auth.store.ts` | providedIn: 'root' pattern |
+| Reusable withLoading feature | `src/app/shared/store-features/with-loading.ts` lines 7-36 | signalStoreFeature replacing manual loading flags |
+| Real aggregation store | `src/app/features/dashboard/store/dashboard.store.ts` lines 34-78 | Four stores injected in withComputed |
+| Real mediator | `src/app/core/coordination/store-coordinator.service.ts` lines 14-19 | Five stores coordinated from one service |
+| Anti-pattern 1: effect for derivation | `docs/sections/section-10-migration-patterns.md` lines 222-227 | Bad effect() vs good computed() |
+| Anti-pattern 4: mutating signals | `src/app/core/activity-log/activity-log.store.ts` lines 43-44 | Immutable array update with spread + slice |
+| Anti-pattern 5: API calls in components | `src/app/features/dashboard/dashboard.component.ts` line 348 | Component injects only the store |
+| Anti-pattern 6: derived data in state | `src/app/features/dashboard/store/dashboard.store.ts` lines 48-53 | lowStockProducts as computed, not state |
+| Anti-pattern 7: one mega store | `src/app/core/coordination/store-coordinator.service.ts` lines 9-12 | Mediator pattern CONCEPT comment |
+| Decision tree | `docs/sections/section-10-migration-patterns.md` lines 282-294 | Interactive flowchart for state approach |
+| Migration strategy | `docs/sections/section-10-migration-patterns.md` lines 343-348 | Feature-by-feature migration steps |
+| When to migrate / when not to | `docs/sections/section-10-migration-patterns.md` lines 360-371 | Keep RxJS for WebSockets, complex async |
+
+---
+
+## Recovery Steps
+
+| Problem | Fix |
+|---------|-----|
+| Spec file not found | Verify `docs/sections/section-10-migration-patterns.md` exists. If deleted, restore from git: `git checkout -- docs/sections/section-10-migration-patterns.md`. |
+| Cannot show "good pattern" files | All referenced files are in the main project. If inventory store is missing, check `src/app/features/inventory/store/inventory.store.ts`. If any store file is missing, run `git status` to check for uncommitted deletions. |
+| Audience asks for a live migration demo | You can live-code it by creating a temporary BehaviorSubject service and converting it step by step. Use the mapping table from the spec as your guide. Delete the temporary files after the demo. |
+| Audience asks about NgRx Store (classic) migration | Refer to the spec's teaching notes (spec lines 342-384). The mapping is: reducers to withState + patchState, selectors to withComputed, effects to rxMethod, actions to direct method calls. |
+| Dashboard not loading for architecture recap | Ensure you are logged in. The dashboard route requires authentication. If data is stale, log out and back in to trigger the coordinator's onLogin flow. |
+| Questions about performance of computed across stores | Explain that computed signals are lazy: they only recalculate when read. If the dashboard is not on screen, its computed signals do not recalculate even when upstream stores change. |
