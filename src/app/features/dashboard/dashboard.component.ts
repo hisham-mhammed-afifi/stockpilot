@@ -242,7 +242,7 @@ import { DashboardStore } from './store/dashboard.store';
 
     .welcome {
       margin: 0 0 24px 0;
-      color: rgba(0, 0, 0, 0.6);
+      color: var(--mat-sys-on-surface-variant);
     }
 
     .summary-grid {
@@ -279,7 +279,7 @@ import { DashboardStore } from './store/dashboard.store';
 
       .card-label {
         font-size: 13px;
-        color: rgba(0, 0, 0, 0.6);
+        color: var(--mat-sys-on-surface-variant);
       }
     }
 
@@ -309,7 +309,7 @@ import { DashboardStore } from './store/dashboard.store';
 
     .empty-text {
       padding: 16px 0;
-      color: rgba(0, 0, 0, 0.5);
+      color: var(--mat-sys-on-surface-variant);
       font-style: italic;
     }
 
@@ -320,12 +320,12 @@ import { DashboardStore } from './store/dashboard.store';
 
     .activity-time {
       font-size: 12px;
-      color: rgba(0, 0, 0, 0.5);
+      color: var(--mat-sys-on-surface-variant);
     }
 
     .completed-todo {
       text-decoration: line-through;
-      color: rgba(0, 0, 0, 0.4);
+      color: var(--mat-sys-on-surface-variant);
     }
 
     .activity-chips {
@@ -333,6 +333,11 @@ import { DashboardStore } from './store/dashboard.store';
       flex-wrap: wrap;
       gap: 8px;
       padding: 8px 0;
+    }
+
+    // Mat-list by default sets a fixed height on leading icons which can cause alignment issues with multi-line text. Override that here.
+    .mdc-list-item--with-leading-icon .mdc-list-item__start {
+      height: auto;
     }
   `,
 })

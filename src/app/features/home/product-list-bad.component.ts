@@ -33,14 +33,16 @@ import { ProductItemBadComponent } from './product-item-bad.component';
       <mat-progress-bar mode="indeterminate" />
     }
 
-    @for (product of products(); track product.id) {
-      <!-- CONCEPT: Anti-pattern - Forwarding events. This component re-emits addToCart
-           from product-item-bad up to its parent (home). Three levels of event bubbling. -->
-      <app-product-item-bad
-        [product]="product"
-        (addToCart)="addToCart.emit($event)"
-      />
-    }
+    <div class="product-list">
+      @for (product of products(); track product.id) {
+        <!-- CONCEPT: Anti-pattern - Forwarding events. This component re-emits addToCart
+             from product-item-bad up to its parent (home). Three levels of event bubbling. -->
+        <app-product-item-bad
+          [product]="product"
+          (addToCart)="addToCart.emit($event)"
+        />
+      }
+    </div>
 
     @if (!loading() && products().length === 0) {
       <p>No products loaded.</p>
@@ -59,6 +61,11 @@ import { ProductItemBadComponent } from './product-item-bad.component';
     .call-counter {
       font-size: 13px;
       margin-right: 8px;
+    }
+    .product-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
     }
   `,
 })

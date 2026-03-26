@@ -35,16 +35,20 @@ import { ProductActionsBadComponent } from './product-actions-bad.component';
     </mat-card>
   `,
   styles: `
+    :host {
+      flex: 1 1 220px;
+      min-width: 200px;
+    }
     .product-card {
-      margin-bottom: 12px;
+      height: 100%;
     }
     .price {
       font-size: 18px;
       font-weight: 500;
-      color: #1976d2;
+      color: var(--mat-sys-primary);
     }
     .stock {
-      color: rgba(0, 0, 0, 0.6);
+      color: var(--mat-sys-on-surface-variant);
     }
     img {
       max-height: 140px;

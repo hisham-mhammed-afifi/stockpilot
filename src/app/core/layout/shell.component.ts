@@ -193,7 +193,7 @@ interface NavItem {
     }
 
     .active-link {
-      background-color: rgba(0, 0, 0, 0.04);
+      background-color: var(--mat-sys-surface-variant);
     }
 
     .user-avatar {
@@ -244,7 +244,7 @@ export class ShellComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.subscription = this.breakpointObserver
-      .observe([Breakpoints.Handset])
+      .observe([Breakpoints.Handset, Breakpoints.TabletPortrait])
       .subscribe(result => this.isMobile.set(result.matches));
   }
 

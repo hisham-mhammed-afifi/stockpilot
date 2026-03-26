@@ -173,7 +173,7 @@ import { Product } from '../../shared/models/product.model';
       border-radius: 8px;
       object-fit: contain;
       max-height: 400px;
-      background: #f5f5f5;
+      background: var(--mat-sys-surface-variant);
     }
 
     .thumbnail-row {
@@ -194,7 +194,7 @@ import { Product } from '../../shared/models/product.model';
     }
 
     .thumbnail:hover {
-      border-color: rgba(0, 0, 0, 0.2);
+      border-color: var(--mat-sys-outline-variant);
     }
 
     .thumbnail.selected {
@@ -320,7 +320,7 @@ import { Product } from '../../shared/models/product.model';
     .skeleton-image {
       height: 300px;
       border-radius: 8px;
-      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background: linear-gradient(90deg, var(--mat-sys-surface-variant) 25%, var(--mat-sys-outline-variant) 50%, var(--mat-sys-surface-variant) 75%);
       background-size: 200% 100%;
       animation: shimmer 1.5s infinite;
     }
@@ -334,7 +334,7 @@ import { Product } from '../../shared/models/product.model';
     .skeleton-line {
       height: 20px;
       border-radius: 4px;
-      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background: linear-gradient(90deg, var(--mat-sys-surface-variant) 25%, var(--mat-sys-outline-variant) 50%, var(--mat-sys-surface-variant) 75%);
       background-size: 200% 100%;
       animation: shimmer 1.5s infinite;
     }

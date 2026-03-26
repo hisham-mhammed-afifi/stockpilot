@@ -407,7 +407,7 @@ doubled = computed(
 
     .cart-header {
       font-weight: 500;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+      border-bottom: 1px solid var(--mat-sys-outline-variant);
     }
 
     .qty-field {
@@ -436,7 +436,7 @@ doubled = computed(
     }
 
     .console-panel {
-      border: 1px solid rgba(0, 0, 0, 0.12);
+      border: 1px solid var(--mat-sys-outline-variant);
       border-radius: 8px;
       overflow: hidden;
       margin: 8px 0;

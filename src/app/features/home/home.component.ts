@@ -23,7 +23,7 @@ import { ProductListBadComponent } from './product-list-bad.component';
     <h1>Section 01: The Problem</h1>
     <p class="subtitle">Why state management matters - see the pain points firsthand</p>
 
-    <div class="demo-grid">
+    <div class="demo-stack">
       <!-- Left card: Bad patterns demo -->
       <mat-card class="demo-card">
         <mat-card-header>
@@ -33,15 +33,13 @@ import { ProductListBadComponent } from './product-list-bad.component';
         </mat-card-header>
         <mat-card-content>
           <div class="hierarchy-diagram">
-            <mat-chip-set>
-              <mat-chip>home</mat-chip>
-              <mat-icon>arrow_forward</mat-icon>
-              <mat-chip>product-list-bad</mat-chip>
-              <mat-icon>arrow_forward</mat-icon>
-              <mat-chip>product-item-bad</mat-chip>
-              <mat-icon>arrow_forward</mat-icon>
-              <mat-chip>product-actions-bad</mat-chip>
-            </mat-chip-set>
+            <mat-chip>home</mat-chip>
+            <mat-icon>arrow_forward</mat-icon>
+            <mat-chip>product-list-bad</mat-chip>
+            <mat-icon>arrow_forward</mat-icon>
+            <mat-chip>product-item-bad</mat-chip>
+            <mat-icon>arrow_forward</mat-icon>
+            <mat-chip>product-actions-bad</mat-chip>
           </div>
 
           <!-- CONCEPT: Anti-pattern - The event from "Add to Cart" in product-actions-bad
@@ -103,22 +101,13 @@ import { ProductListBadComponent } from './product-list-bad.component';
       margin-bottom: 4px;
     }
     .subtitle {
-      color: rgba(0, 0, 0, 0.6);
+      color: var(--mat-sys-on-surface-variant);
       margin-bottom: 24px;
     }
-    .demo-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
+    .demo-stack {
+      display: flex;
+      flex-direction: column;
       gap: 24px;
-      align-items: start;
-    }
-    @media (max-width: 960px) {
-      .demo-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-    .demo-card {
-      min-height: 400px;
     }
     .bad-icon {
       color: #f44336;
@@ -134,20 +123,22 @@ import { ProductListBadComponent } from './product-list-bad.component';
       flex-wrap: wrap;
     }
     .hierarchy-diagram mat-icon {
+      display: flex;
+      align-items: center;
       font-size: 18px;
       width: 18px;
       height: 18px;
-      color: rgba(0, 0, 0, 0.4);
+      color: var(--mat-sys-on-surface-variant);
     }
     .teaser-message {
       margin-top: 16px;
       padding: 16px;
-      background: rgba(76, 175, 80, 0.08);
+      background: color-mix(in srgb, var(--mat-sys-primary) 8%, transparent);
       border-radius: 8px;
     }
     .teaser-message p {
       margin: 0;
-      color: rgba(0, 0, 0, 0.7);
+      color: var(--mat-sys-on-surface-variant);
     }
   `,
 })
