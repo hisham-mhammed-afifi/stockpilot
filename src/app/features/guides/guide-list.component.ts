@@ -55,7 +55,7 @@ interface GuideEntry {
 
     .guide-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(min(400px, 100%), 1fr));
       gap: 16px;
     }
 

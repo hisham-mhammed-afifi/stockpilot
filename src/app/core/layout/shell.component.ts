@@ -186,6 +186,12 @@ interface NavItem {
       box-sizing: border-box;
     }
 
+    @media (max-width: 599px) {
+      .content {
+        padding: 12px;
+      }
+    }
+
     .active-link {
       background-color: rgba(0, 0, 0, 0.04);
     }

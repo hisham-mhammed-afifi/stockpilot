@@ -196,6 +196,70 @@ import { marked } from 'marked';
     .markdown-body a:hover {
       text-decoration: underline;
     }
+
+    /* Markdown mobile responsiveness */
+    .markdown-body {
+      overflow-wrap: break-word;
+      word-break: break-word;
+    }
+
+    .markdown-body pre {
+      max-width: 100%;
+    }
+
+    .markdown-body table {
+      display: block;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .markdown-body img {
+      max-width: 100%;
+      height: auto;
+    }
+
+    @media (max-width: 599px) {
+      .guide-viewer {
+        padding: 12px 12px 32px;
+      }
+
+      .markdown-body {
+        font-size: 14px;
+      }
+
+      .markdown-body h1 {
+        font-size: 22px;
+        margin: 24px 0 12px;
+      }
+
+      .markdown-body h2 {
+        font-size: 18px;
+        margin: 20px 0 10px;
+      }
+
+      .markdown-body h3 {
+        font-size: 16px;
+      }
+
+      .markdown-body pre {
+        padding: 12px;
+        font-size: 12px;
+        border-radius: 6px;
+      }
+
+      .markdown-body pre code {
+        font-size: 12px;
+      }
+
+      .markdown-body blockquote {
+        padding: 6px 12px;
+      }
+
+      .markdown-body th, .markdown-body td {
+        padding: 6px 8px;
+        font-size: 13px;
+      }
+    }
   `,
 })
 export class GuideViewerComponent {

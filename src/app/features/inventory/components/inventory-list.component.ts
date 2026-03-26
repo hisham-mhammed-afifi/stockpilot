@@ -495,6 +495,33 @@ import { Product } from '../../../shared/models/product.model';
         height: auto;
       }
     }
+
+    @media (max-width: 480px) {
+      .stats-bar {
+        grid-template-columns: 1fr;
+      }
+
+      .filters-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .search-field,
+      .category-field,
+      .sort-field {
+        min-width: unset;
+        width: 100%;
+      }
+
+      .stock-filter-row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .detail-meta {
+        grid-template-columns: 1fr;
+      }
+    }
   `,
 })
 export class InventoryListComponent {

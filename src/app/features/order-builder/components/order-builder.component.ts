@@ -177,57 +177,59 @@ import { Product } from '../../../shared/models/product.model';
         <div class="step-container">
           <h2>Review Your Order</h2>
 
-          <table mat-table [dataSource]="store.selectedProducts()" class="order-table">
-            <ng-container matColumnDef="thumbnail">
-              <th mat-header-cell *matHeaderCellDef></th>
-              <td mat-cell *matCellDef="let item">
-                <img [src]="item.thumbnail" [alt]="item.title" class="table-thumb" />
-              </td>
-            </ng-container>
+          <div class="order-table-wrapper">
+            <table mat-table [dataSource]="store.selectedProducts()" class="order-table">
+              <ng-container matColumnDef="thumbnail">
+                <th mat-header-cell *matHeaderCellDef></th>
+                <td mat-cell *matCellDef="let item">
+                  <img [src]="item.thumbnail" [alt]="item.title" class="table-thumb" />
+                </td>
+              </ng-container>
 
-            <ng-container matColumnDef="title">
-              <th mat-header-cell *matHeaderCellDef>Product</th>
-              <td mat-cell *matCellDef="let item">{{ item.title }}</td>
-            </ng-container>
+              <ng-container matColumnDef="title">
+                <th mat-header-cell *matHeaderCellDef>Product</th>
+                <td mat-cell *matCellDef="let item">{{ item.title }}</td>
+              </ng-container>
 
-            <ng-container matColumnDef="price">
-              <th mat-header-cell *matHeaderCellDef>Price</th>
-              <td mat-cell *matCellDef="let item">{{ item.price | currency }}</td>
-            </ng-container>
+              <ng-container matColumnDef="price">
+                <th mat-header-cell *matHeaderCellDef>Price</th>
+                <td mat-cell *matCellDef="let item">{{ item.price | currency }}</td>
+              </ng-container>
 
-            <ng-container matColumnDef="quantity">
-              <th mat-header-cell *matHeaderCellDef>Quantity</th>
-              <td mat-cell *matCellDef="let item">
-                <mat-form-field class="quantity-field" appearance="outline">
-                  <input
-                    matInput
-                    type="number"
-                    [ngModel]="item.quantity"
-                    (ngModelChange)="store.updateQuantity(item.productId, $event)"
-                    min="1"
-                    max="99"
-                  />
-                </mat-form-field>
-              </td>
-            </ng-container>
+              <ng-container matColumnDef="quantity">
+                <th mat-header-cell *matHeaderCellDef>Quantity</th>
+                <td mat-cell *matCellDef="let item">
+                  <mat-form-field class="quantity-field" appearance="outline">
+                    <input
+                      matInput
+                      type="number"
+                      [ngModel]="item.quantity"
+                      (ngModelChange)="store.updateQuantity(item.productId, $event)"
+                      min="1"
+                      max="99"
+                    />
+                  </mat-form-field>
+                </td>
+              </ng-container>
 
-            <ng-container matColumnDef="subtotal">
-              <th mat-header-cell *matHeaderCellDef>Subtotal</th>
-              <td mat-cell *matCellDef="let item">{{ item.price * item.quantity | currency }}</td>
-            </ng-container>
+              <ng-container matColumnDef="subtotal">
+                <th mat-header-cell *matHeaderCellDef>Subtotal</th>
+                <td mat-cell *matCellDef="let item">{{ item.price * item.quantity | currency }}</td>
+              </ng-container>
 
-            <ng-container matColumnDef="actions">
-              <th mat-header-cell *matHeaderCellDef></th>
-              <td mat-cell *matCellDef="let item">
-                <button mat-icon-button color="warn" (click)="store.removeFromOrder(item.productId)" matTooltip="Remove item">
-                  <mat-icon>delete</mat-icon>
-                </button>
-              </td>
-            </ng-container>
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef></th>
+                <td mat-cell *matCellDef="let item">
+                  <button mat-icon-button color="warn" (click)="store.removeFromOrder(item.productId)" matTooltip="Remove item">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </td>
+              </ng-container>
 
-            <tr mat-header-row *matHeaderRowDef="reviewColumns"></tr>
-            <tr mat-row *matRowDef="let row; columns: reviewColumns"></tr>
-          </table>
+              <tr mat-header-row *matHeaderRowDef="reviewColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: reviewColumns"></tr>
+            </table>
+          </div>
 
           <div class="order-summary">
             <h3>Order Total: {{ store.orderTotal() | currency }}</h3>
@@ -323,6 +325,8 @@ import { Product } from '../../../shared/models/product.model';
       padding: 8px 0;
       margin-bottom: 16px;
       height: auto;
+      flex-wrap: wrap;
+      gap: 8px;
     }
 
     .toolbar-left {
@@ -495,6 +499,46 @@ import { Product } from '../../../shared/models/product.model';
     .confirmation-total {
       text-align: right;
       padding: 16px 0 0;
+    }
+
+    .order-table-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    @media (max-width: 599px) {
+      .toolbar-right {
+        flex-wrap: wrap;
+      }
+
+      .step-label {
+        display: none;
+      }
+
+      .step-container {
+        max-width: 100%;
+      }
+
+      .step-actions {
+        flex-direction: column;
+      }
+
+      .step-actions button {
+        width: 100%;
+      }
+
+      .step-subtitle {
+        flex-wrap: wrap;
+      }
+
+      .confirmation-item {
+        font-size: 14px;
+      }
+
+      .confirm-thumb {
+        width: 32px;
+        height: 32px;
+      }
     }
   `,
 })
